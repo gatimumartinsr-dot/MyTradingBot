@@ -61,15 +61,15 @@ if os.path.exists(balance_file):
     except Exception:
         pass
 
-# Sliding Nav Core System Tabs
+# FIXED: Explicitly separated and isolated every sliding tab handle variable name
 t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
     "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
 ])
 
-# ==================== TAB 1: CONNECT BROKERS ====================
+# ==================== TAB 1: SIGN IN ====================
 with t_signin:
-    st.markdown("<h2 style='text-align: center; color: white;'> Universal Broker Link Gate </h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: white;'>Universal Broker Link Gate</h2>", unsafe_allow_html=True)
     broker_select = st.selectbox("CHOOSE SYSTEM TERMINAL ARCHITECTURE", ["Exness Technologies Ltd", "JustMarkets Inc.", "XM Global Markets"])
     col_log1, col_log2 = st.columns(2)
     with col_log1: st.text_input("MT5 ACCOUNT LOGIN USER ID", value="474239881", disabled=True)
@@ -78,7 +78,7 @@ with t_signin:
     st.write(" ")
     st.success("🔒 System active: Cloud authentication handshake linked with your laptop background terminal engine loop.")
 
-# ==================== TAB 2: AUTOMATED DASHBOARD FORM ====================
+# ==================== TAB 2: DASHBOARD ====================
 with t_dashboard:
     st.markdown(f"Status: <span style='color:#10b981; font-family:monospace; font-weight:600;'>{account_status}</span>", unsafe_allow_html=True)
     st.subheader("📊 Cross-Broker Account Status Monitor")
@@ -124,7 +124,7 @@ with t_dashboard:
             st.balloons()
             st.success(f"🚀 Signals Dispatched to Exness! Volume: {recommended_lots} Lots | Risked Amount: ${risk_amount:.2f}")
 
-# ==================== TAB 3: PROF CHART CANVAS & REASONS LOG ====================
+# ==================== TAB 3: CHART ====================
 with t_chart:
     st.markdown("<div class='header-box'><p style='color:#10b981; font-family:monospace; margin:0;'>🟢 RADAR STREAMING ACTIVE • XAUUSDm LIVE ENVIRONMENT</p></div>", unsafe_allow_html=True)
     np.random.seed(42)
@@ -160,7 +160,7 @@ with t_gate:
     r4 = st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints")
     if r1 and r2 and r3 and r4: st.success("🔓 Setup Authorized! System strategy guidelines fully cleared.")
 
-# ==================== TAB 5: JOURNAL LOGS ====================
+# ==================== TAB 5: JOURNAL ====================
 with t_journal:
     st.subheader("🗒️ Smartphone Active Order Journal")
     st.dataframe(pd.DataFrame(st.session_state.journal_data), use_container_width=True)
