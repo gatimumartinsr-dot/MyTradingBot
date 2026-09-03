@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Initialize deep dark professional theme wrapper configuration elements
+# Initialize clean wide workspace layouts
 st.set_page_config(page_title="Helix Multi-Broker Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("""
@@ -49,7 +49,6 @@ with t_signin:
     st.markdown("<h2 style='text-align: center; color: white;'>🟢 UNIVERSAL BROKER CROSS-LINK GATES</h2>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #9ca3af; font-weight: 300; margin-bottom: 25px;'>Prime connection pipelines for any MT5 terminal.</h3>", unsafe_allow_html=True)
     
-    # Fully expandable list to adapt to your specific broker servers
     broker_select = st.selectbox("SELECT DESTINATION BROKER TERMINAL ENGINE", 
                                  ["Exness Technologies Ltd", "JustMarkets Inc.", "XM Global Markets", "Windsor Brokers", "Pepperstone Group"])
     
@@ -176,3 +175,5 @@ with t_gate:
 
 # ==================== TAB 5: JOURNAL LOGS ====================
 with t_journal:
+    st.subheader("🗒️ Smartphone Active Order Journal")
+    if st.session_state.journal_data:
