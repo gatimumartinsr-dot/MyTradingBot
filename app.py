@@ -135,19 +135,24 @@ with t_chart:
     highs = np.maximum(opens, closes) + np.random.uniform(1, 3, 39)
     lows = np.minimum(opens, closes) - np.random.uniform(1, 3, 39)
 
-    fig = go.Figure(data=[go.Candlestick(
+    fig = go.Figure()
+
+    # Add the core candlestick data
+    fig.add_trace(go.Candlestick(
         x=chart_time[:-1], open=opens, high=highs, low=lows, close=closes,
         increasing_line_color='#10b981', decreasing_line_color='#ef5350',
-        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
-    )])
+        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350',
+        name="Market Price"
+    ))
 
     # Precise Long/Short Risk Range target visualization boxes
-    fig.add_shape(type="rect", x0=chart_time, y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time, y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
 
-    fig.add_hline(y=2515.00, line_dash="solid")
-    fig.add_hline(y=2500.00, line_dash="dash")
-    fig.add_hline(y=2495.00, line_dash="dash")
+    # SAFE FIX: Add the institutional levels as stable linear traces instead of standalone add_hline tools
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2515.00, 2515.00], mode="lines", line=dict(color="#10b981", width=2), name="Take Profit"))
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2500.00, 2500.00], mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"), name="Limit Entry"))
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2495.00, 2495.00], mode="lines", line=dict(color="#ef5350", width=2, dash="dot"), name="Stop Loss"))
 
     fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=350, margin=dict(l=5, r=5, t=5, b=5), paper_bgcolor='#0b1116', plot_bgcolor='#0b1116')
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
@@ -169,10 +174,3 @@ with t_gate:
     st.subheader("🛡️ Institutional Setup Validation Checklist")
     r1 = st.checkbox("🔍 Structural footprint has successfully tapped into unmitigated Order Block demand (OB)")
     r2 = st.checkbox("⚡ Strong momentum expansion displacement left a valid 3-candle Fair Value Gap vacuum (FVG)")
-    r3 = st.checkbox("📈 Current pricing layout baseline is fully aligned with 200 MA trend vector parameters")
-    r4 = st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints")
-    if r1 and r2 and r3 and r4: st.success("🔓 Setup Authorized! System strategy guidelines fully cleared.")
-
-# ==================== TAB 5: JOURNAL LOGS (REWRITTEN WITHOUT INDENTATION RISK) ====================
-with t_journal:
-    st.subheader("🗒️ Smartphone Active Order Journal")
