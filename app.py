@@ -70,7 +70,7 @@ t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.t
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
 ])
 
-# ==================== TAB 1: SIGN IN (SECURED & VISUALLY BLINDED) ====================
+# ==================== TAB 1: SIGN IN ====================
 with t_signin:
     st.markdown("<h2 style='text-align: center; color: white;'>🟢 HELIX OB SECURITY PORTAL</h2>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #9ca3af; font-weight: 300; margin-bottom: 25px;'>Authentication protocols actively hidden.</h3>", unsafe_allow_html=True)
@@ -78,7 +78,6 @@ with t_signin:
     broker_select = st.radio("SELECT BROKER ARCHITECTURE", ["Exness", "IC Markets", "Pepperstone"], horizontal=True)
     st.write(" ")
     
-    # Secured text layout configuration parameters to obscure personal metrics
     acc_num = st.text_input("ACCOUNT ID METRIC", value="474239881", type="password", placeholder="Enter Account Identification Number")
     acc_pass = st.text_input("TRADING EXECUTION TERMINAL PASSWORD", value="ExnessSecret2026", type="password", placeholder="••••••••••••")
     
@@ -88,7 +87,7 @@ with t_signin:
     if st.button("Connect Secure Cloud Handoff", type="primary", use_container_width=True):
         st.success("🔒 Secure verification accepted. Connection elements successfully hidden from display screens!")
 
-# ==================== TAB 2: DASHBOARD (AUTO-CLEARING FORM FIELD ENGINE) ====================
+# ==================== TAB 2: DASHBOARD ====================
 with t_dashboard:
     st.subheader("📊 Live Account Status Monitor")
     m_col1, m_col2, m_col3 = st.columns(3)
@@ -99,7 +98,6 @@ with t_dashboard:
     st.divider()
     st.subheader("🤖 Mobile Order Dispatch Console")
     
-    # Form containment block ensuring all tracking entries wipe completely blank upon execution submission
     with st.form("clearable_dispatch_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -149,7 +147,6 @@ with t_chart:
         </div>
     """, unsafe_allow_html=True)
 
-    # Asset selector pill simulation navigation bars
     st.radio("TICKER RADAR ASSIGNMENT", ["XAU", "BTC", "XAG", "EUR", "GBP"], horizontal=True, label_visibility="collapsed")
 
     # Generating Candle Vector Matrices
@@ -167,13 +164,10 @@ with t_chart:
         increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
     )])
 
-    # --- NEW VISUAL LONG POSITION RISK ZONE BOXES OVERLAYS ---
-    # Profit target green bounding box range layout zone
-    fig.add_shape(type="rect", x0=chart_time[15], y0=3412.00, x1=chart_time[-1], y1=3460.00, fillcolor="rgba(16, 185, 129, 0.15)", line=dict(width=0))
-    # Risk validation validation red bounding box layout target range zone
-    fig.add_shape(type="rect", x0=chart_time[15], y0=3392.00, x1=chart_time[-1], y1=3412.00, fillcolor="rgba(239, 83, 80, 0.15)", line=dict(width=0))
+    # Long Position Boxes Overlays
+    fig.add_shape(type="rect", x0=chart_time[0], y0=3412.00, x1=chart_time[-1], y1=3460.00, fillcolor="rgba(16, 185, 129, 0.15)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=3392.00, x1=chart_time[-1], y1=3412.00, fillcolor="rgba(239, 83, 80, 0.15)", line=dict(width=0))
 
-    # Core system benchmark levels mapping definitions
     fig.add_hline(y=3460.00, line_dash="solid", line_color="#10b981", annotation_text="TP TARGET: 3,460.00", annotation_position="top right")
     fig.add_hline(y=3412.00, line_dash="dash", line_color="#3b82f6", annotation_text="LIMIT ENTRY: 3,412.00", annotation_position="top right")
     fig.add_hline(y=3405.00, line_dash="solid", line_color="#fbbf24", annotation_text="INSTITUTIONAL ORDER BLOCK ZONE", annotation_position="bottom right")
@@ -186,10 +180,12 @@ with t_chart:
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    # --- NEW: DETAILED STRUCTURAL COMMENTARY JOURNAL BLOCK ---
     st.write(" ")
     st.subheader("📝 Setup Structural Confluence Commentary Log")
     
     st.markdown("""
         <div class="journal-box">
             <h5 style='color:#60a5fa; margin-bottom:5px; font-family:monospace;'>🛡️ WHY WAS THIS ORDER BLOCK TAKEN?</h5>
+            <p style='color:#d1d5db; font-size:14px; margin-top:0;'>Price generated a significant high-volume displacement upwards, violently breaking past the previous minor swing structure (BOS Confirmed). This left a highly defined, unmitigated institutional footprint candle block at the origin point ($3,405.00) which serves as our major structural demand loading area.</p>
+            
+            <h5 style='color:#fbbf24; margin-bottom:5px; font-family:monospace;'>⚡ WHY WAS THIS SPECIFIC FVG DRIVEN AS AN ENTRY ZONE?</h5>
