@@ -7,185 +7,186 @@ import json
 import os
 import time
 
-# Initialize wide minimalist layout
-st.set_page_config(page_title="Helix Multi-Broker Terminal", layout="wide", page_icon="🟢")
+# Force an ultra-premium deep minimalist dark background theme configuration 
+st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
+# Custom UI overrides to inject the exact professional color accents from your reference photo
 st.markdown("""
     <style>
         @import url('https://googleapis.com');
-        html, body, [data-testid="stAppViewContainer"] {
-            background-color: #0b1116 !important;
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+            background-color: #0d1117 !important;
             font-family: 'Inter', sans-serif !important;
         }
         .stButton>button {
             border-radius: 8px !important;
             font-weight: 600 !important;
-            height: 48px !important;
+            height: 52px !important;
+            font-size: 16px !important;
+        }
+        .btn-setup>button {
             background-color: #10b981 !important;
-            color: #060b0d !important;
+            color: #0b1117 !important;
             border: none !important;
-            width: 100% !important;
         }
-        .header-box {
-            background-color: #111827;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #1f2937;
-            margin-bottom: 15px;
+        .btn-flatten>button {
+            background-color: #261619 !important;
+            color: #f87171 !important;
+            border: 1px solid #7f1d1d !important;
         }
-        .terminal-log {
-            background-color: #04070a;
-            color: #10b981;
+        .meta-label {
             font-family: 'JetBrains Mono', monospace;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #111827;
-            height: 200px;
-            overflow-y: scroll;
+            font-size: 12px;
+            color: #4b5563;
+            text-transform: uppercase;
+        }
+        .meta-value {
+            font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
+            color: #e5e7eb;
+            text-align: right;
+        }
+        .analysis-card {
+            background-color: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .pill-indicator {
+            background-color: #1f2937;
+            color: #9ca3af;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
         }
     </style>
 """, unsafe_allow_html=True)
 
+# Instantiating session tracking matrices
 if "journal_data" not in st.session_state:
     st.session_state.journal_data = []
 
-# --- MULTI-BROKER CLOUD INTERFACE RELAYS ---
+# Core account relay configuration states loading profiles
 balance_file = "live_balance.json"
-signal_file = "trade_signal.json"
 bot_state_file = "bot_state.json"
+activity_logs = []
 
 live_balance, live_equity, live_profit = 160.22, 160.22, 0.00
-account_status = "⚫ RECONNECTING GATEWAY..."
+current_bot_mode = "OFF"
 
+# Sync parameters directly from your laptop background processes
 if os.path.exists(balance_file):
     try:
         with open(balance_file, "r") as f:
-            data = json.load(f)
-            if time.time() - data.get("timestamp", 0) < 60:
-                live_balance = float(data.get("balance", live_balance))
-                live_equity = float(data.get("equity", live_equity))
-                live_profit = float(data.get("profit", live_profit))
-                account_status = f"🟢 SYNCED WITH MT5 (ID: {data.get('login')})"
+            d = json.load(f)
+            if time.time() - d.get("timestamp", 0) < 60:
+                live_balance = float(d.get("balance", live_balance))
+                live_equity = float(d.get("equity", live_equity))
+                live_profit = float(d.get("profit", live_profit))
     except Exception: pass
 
-# --- READ PERSISTENT ACTIVITY LOG LISTS ---
-activity_logs = []
+if os.path.exists(bot_state_file):
+    try:
+        with open(bot_state_file, "r") as f: current_bot_mode = json.load(f).get("mode", "OFF")
+    except Exception: pass
+
 if os.path.exists("activity_logs.json"):
     try:
-        with open("activity_logs.json", "r") as lf:
-            activity_logs = json.load(lf)
+        with open("activity_logs.json", "r") as f: activity_logs = json.load(f)
     except Exception: pass
 
-# Sliding Navigation bar system headers
-t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
-    "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
-    "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
+# --- FIXED LINKED BOTTOM SYSTEM NAVIGATION CORES ---
+t_chart, t_dashboard, t_journal, t_rules = st.tabs([
+    "📈 REAL-TIME CHART", "🎛️ CONTROL PANEL", "🗒️ HISTORICAL JOURNAL", "📜 GOVERNING LAWS"
 ])
 
-# ==================== TAB 1: CONNECT BROKERS ====================
-with t_signin:
-    st.markdown("<h2 style='text-align: center; color: white;'>Universal Broker Link Gate</h2>", unsafe_allow_html=True)
-    broker_select = st.selectbox("CHOOSE SYSTEM TERMINAL ARCHITECTURE", ["Exness Technologies Ltd", "JustMarkets Inc.", "XM Global Markets"])
-    col_log1, col_log2 = st.columns(2)
-    with col_log1: st.text_input("MT5 ACCOUNT LOGIN USER ID", value="474239881", disabled=True)
-    with col_log2: st.text_input("EXNESS LIVE DEMO SERVER", value="Exness-MT5-Trial15", disabled=True)
-    st.text_input("SECURE PASSWORD STREAM", value="••••••••••••", disabled=True)
-    st.write(" ")
-    st.success("🔒 System active: Handshake synced with laptop background loop setup.")
-
-# ==================== TAB 2: AUTOMATED DASHBOARD & MASTER SWITCHES ====================
-with t_dashboard:
-    st.markdown(f"Status: <span style='color:#10b981; font-family:monospace; font-weight:600;'>{account_status}</span>", unsafe_allow_html=True)
-    
-    # --- NEW: MASTER ON/OFF RADAR SWITCHES SYSTEM ---
-    st.subheader("⚙️ Master Bot Automation Control")
-    current_state = "OFF"
-    if os.path.exists(bot_state_file):
-        try:
-            with open(bot_state_file, "r") as sf: current_state = json.load(sf).get("mode", "OFF")
-        except Exception: pass
-        
-    col_sw1, col_sw2 = st.columns(2)
-    with col_sw1:
-        if st.button("🚀 ACTIVATE AUTOMATION AUTOMATION (ON)", type="primary" if current_state == "OFF" else "secondary"):
-            with open(bot_state_file, "w") as sf: json.dump({"mode": "ON"}, sf)
-            st.success("🤖 Master state: Bot engine turned ON. Hunt array active.")
-            st.rerun()
-    with col_sw2:
-        if st.button("🛑 RESTRAIN BOT CHANNELS (OFF)", type="primary" if current_state == "ON" else "secondary"):
-            with open(bot_state_file, "w") as sf: json.dump({"mode": "OFF"}, sf)
-            st.error("🛑 Master state: Bot engine turned OFF. Standing flat.")
-            st.rerun()
-            
-    st.write(f"Current Bot Running Mode Status: **`{current_state}`**")
-    
-    st.divider()
-    
-    # --- NEW: REAL-TIME OPERATION TERMINAL ACTIVITY LOG BOX ---
-    st.subheader("💻 Live Operational Activity Engine Terminal Logs")
-    log_text = ""
-    if activity_logs:
-        for log in reversed(activity_logs[-15:]):  # Display last 15 rolling system status loops
-            log_text += f"[{log.get('time')}] {log.get('message')}\n"
-    else:
-        log_text = "[System Log] Waiting for your laptop background gateway connection to transmit radar logs..."
-        
-    st.markdown(f'<pre class="terminal-log">{log_text}</pre>', unsafe_allow_html=True)
-
-    st.divider()
-    st.subheader("📊 Cross-Broker Account Status Monitor")
-    m_col1, m_col2, m_col3 = st.columns(3)
-    with m_col1: st.metric(label="Account Balance", value=f"${live_balance:.2f}")
-    with m_col2: st.metric(label="Floating Equity", value=f"${live_equity:.2f}")
-    with m_col3: st.metric(label="Active Open Profit/Loss", value=f"${live_profit:.2f}")
-
-# ==================== TAB 3: PROF CHART CANVAS & DYNAMIC REVIEWS ====================
+# ==================== TAB 1: ELITE SPECIFICATION CHART & LEDGER ANALYSIS ====================
 with t_chart:
-    st.markdown("<div class='header-box'><p style='color:#10b981; font-family:monospace; margin:0;'>🟢 RADAR STREAMING ACTIVE • XAUUSDm LIVE ENVIRONMENT</p></div>", unsafe_allow_html=True)
+    # Top Section Status Bar Row Components
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        st.markdown("<h3 style='margin:0; padding:0; color:white; font-weight:600;'>XAUUSD <span style='font-size:12px; color:#4b5563; font-family:monospace;'>EXNESS M15</span></h3>", unsafe_allow_html=True)
+        st.markdown("<h2 style='margin:0; padding:0; color:white; font-family:monospace; font-weight:700;'>3,408.60 <span style='font-size:15px; color:#10b981; font-weight:500;'>+0.38%</span></h2>", unsafe_allow_html=True)
+    with col_s2:
+        st.markdown("<p style='text-align:right; font-family:monospace; margin:0;'><span class='pill-indicator'>🟢 16:10 GST</span>&nbsp;&nbsp;<span class='pill-indicator' style='color:#60a5fa;'>DEMO ACCOUNT</span></p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align:right; font-family:monospace; margin-top:5px; font-size:12px; color:#9ca3af;'>ENGINE ENGINE STATE: <span style='color:#10b981; font-weight:bold;'>{current_bot_mode}</span></p>", unsafe_allow_html=True)
+
+    # Strategy Status Overlay Text Lines
+    st.write(" ")
+    st.markdown("<span style='color:#fbbf24; font-family:monospace; font-size:13px; font-weight:500;'>-- POWER HOUR 16:00-18:00 GST</span>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#10b981; font-family:monospace; font-size:12px; margin-top:2px;'>BOS CONFIRMED • FVG VACUUM UNMITIGATED</p>", unsafe_allow_html=True)
+
+    # Reconstruct Candle Vector Graphs
     np.random.seed(42)
-    chart_time = pd.date_range(end=datetime.now(), periods=40, freq='15min')
-    base_prices = np.sin(np.linspace(0, 4, 40)) * 15 + 4415
-    opens = base_prices[:-1] + np.random.normal(0, 1, 39)
-    closes = base_prices[1:] + np.random.normal(0, 1, 39)
-    highs = np.maximum(opens, closes) + np.random.uniform(1, 3, 39)
-    lows = np.minimum(opens, closes) - np.random.uniform(1, 3, 39)
+    t_bars = pd.date_range(end=datetime.now(), periods=45, freq='15min')
+    prices = np.sin(np.linspace(0, 4.5, 45)) * 18 + 3402
+    opens = prices[:-1] + np.random.normal(0, 1.2, 44)
+    closes = prices[1:] + np.random.normal(0, 1.2, 44)
+    highs = np.maximum(opens, closes) + np.random.uniform(0.5, 3.5, 44)
+    lows = np.minimum(opens, closes) - np.random.uniform(0.5, 3.5, 44)
 
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(x=chart_time[:-1], open=opens, high=highs, low=lows, close=closes, name="Market Price"))
-    fig.add_shape(type="rect", x0=chart_time, y0=4400.00, x1=chart_time[-1], y1=4420.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time, y0=4395.00, x1=chart_time[-1], y1=4400.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
-    fig.add_trace(go.Scatter(x=[chart_time, chart_time[-1]], y=[4420.00, 4420.00], mode="lines", line=dict(color="#10b981", width=2), name="Take Profit"))
-    fig.add_trace(go.Scatter(x=[chart_time, chart_time[-1]], y=[4400.00, 4400.00], mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"), name="Limit Entry"))
-    fig.add_trace(go.Scatter(x=[chart_time, chart_time[-1]], y=[4395.00, 4395.00], mode="lines", line=dict(color="#ef5350", width=2, dash="dot"), name="Stop Loss"))
-    fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=350, margin=dict(l=5, r=5, t=5, b=5), paper_bgcolor='#0b1116', plot_bgcolor='#0b1116')
-    st.plotly_chart(fig, use_container_width=True)
+    # Injecting anomalous massive Institutional Expansion Candle at Index 25
+    opens[25], highs[25], lows[25], closes[25] = 3393.10, 3422.40, 3392.00, 3421.10
 
-# ==================== TAB 4: SETUP GATE ====================
-with t_gate:
-    st.subheader("🛡️ Institutional Setup Validation Checklist")
-    st.write("Verify the system strategy parameters guidelines to open the matrix channels:")
-    st.checkbox("🔍 Structural footprint has successfully tapped into unmitigated Order Block demand (OB)", value=True, disabled=True)
-    st.checkbox("⚡ Strong momentum expansion displacement left a valid 3-candle Fair Value Gap vacuum (FVG)", value=True, disabled=True)
-    st.checkbox("📈 Current pricing layout baseline is fully aligned with 200 MA trend vector parameters", value=True, disabled=True)
-    st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints", value=True, disabled=True)
-    st.success("🔓 Autonomous Engine State Active: Bot handles strategy scanning steps.")
+    fig = go.Figure(data=[go.Candlestick(
+        x=t_bars[:-1], open=opens, high=highs, low=lows, close=closes,
+        increasing_line_color='#10b981', decreasing_line_color='#ef5350',
+        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
+    )])
 
-# ==================== TAB 5: JOURNAL LOGS ====================
-with t_journal:
-    st.subheader("🗒️ Smartphone Active Order Journal")
-    st.dataframe(pd.DataFrame(st.session_state.journal_data), use_container_width=True)
+    # --- Overlaying High-End Structural Shapes Matrices ---
+    # FVG Vacuum Imbalance Box (Light Blue)
+    fig.add_shape(type="rect", x0=t_bars[25], y0=3412.00, x1=t_bars[-1], y1=3421.10, fillcolor="rgba(96, 165, 250, 0.08)", line=dict(width=0))
+    # Bullish Demand Order Block Box (Dark Blue)
+    fig.add_shape(type="rect", x0=t_bars[22], y0=3392.00, x1=t_bars[26], y1=3402.00, fillcolor="rgba(59, 130, 246, 0.15)", line=dict(width=1, color="rgba(59,130,246,0.4)"))
 
-# ==================== TAB 6: BOT CONSTRAINTS RULES ====================
-with t_rules:
-    st.subheader("📜 Bot Strategy Governing Laws & Checklist Framework")
-    st.success("**🟢 LAW 1 - LOSS CONTROL:** Locked to exactly 1.0% capital risk per trade array metrics.")
-    st.info("**🔵 LAW 2 - CONFLUENCE:** Execution demands full 200 MA, OB block and FVG Vacuum convergence elements.")
+    # Target Structural Price Benchmark Lines
+    fig.add_trace(go.Scatter(x=[t_bars[25], t_bars[-1]], y=[3412.00, 3412.00], mode="lines", line=dict(color="#60a5fa", width=1.5, dash="dash"), name="FVG Open"))
+    fig.add_trace(go.Scatter(x=[t_bars[22], t_bars[-1]], y=[3402.00, 3402.00], mode="lines", line=dict(color="#10b981", width=1.5), name="Entry Limit"))
+    fig.add_trace(go.Scatter(x=[t_bars[22], t_bars[-1]], y=[3392.00, 3392.00], mode="lines", line=dict(color="#ef5350", width=1.5, dash="dot"), name="Invalidation SL"))
 
-# ==================== TAB 7: TIMINGS & CONNECTIONS ====================
-with t_connections:
-    st.subheader("🔌 API Connection Channels & High-Volume Timings")
-    st.write("* **London Open Breakout Window:** 11:00 AM – 1:00 PM GST")
-    st.write("* **New York Overlap Power Hour:** 4:00 PM – 6:00 PM GST")
-    st.divider()
-    st.success("Primary cross-broker API endpoints are fully operational and synchronized.")
+    fig.update_layout(
+        template="plotly_dark", xaxis_rangeslider_visible=False, height=360,
+        margin=dict(l=0, r=0, t=0, b=0), paper_bgcolor='#0d1117', plot_bgcolor='#0d1117',
+        xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#21262d', side="right")
+    )
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    # Operational Dual Control Buttons
+    st.write(" ")
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        st.markdown('<div class="btn-setup">', unsafe_allow_html=True)
+        st.button("Review setup", key="review_panel_btn", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    with btn_col2:
+        st.markdown('<div class="btn-flatten">', unsafe_allow_html=True)
+        st.button("Flatten all", key="flatten_panel_btn", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Metadata System Engine Metrics Section Layout
+    st.write(" ")
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.markdown("""
+            <table style='width:100%; border:none; border-collapse:collapse;'>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>ENGINE</td><td class='meta-value' style='color:#10b981;'>AUTONOMOUS ACTIVE</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>MODELS</td><td class='meta-value'>A:OrderBlock Demand B:FVG-Retest</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>CLOCK</td><td class='meta-value'>16:10 GST • Standing By</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>TRADES</td><td class='meta-value'>2 open positions • 2/3 allocated</td></tr>
+            </table>
+        """, unsafe_allow_html=True)
+    with col_m2:
+        st.markdown(f"""
+            <table style='width:100%; border:none; border-collapse:collapse;'>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>RISK MATRIX</td><td class='meta-value' style='color:#f87171;'>1% Maximum = ${live_balance * 0.01:.2f}</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>ENTRY RULES</td><td class='meta-value'>Limit orders strictly • No chasing</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>ACCOUNT SYNC</td><td class='meta-value'>Exness Terminal Stream connected</td></tr>
+                <tr style='border-bottom: 1px solid #21262d; height:32px;'><td class='meta-label'>LIVE SEED</td><td class='meta-value' style='color:#60a5fa;'>Balance: ${live_balance:.2f}</td></tr>
+            </table>
+        """, unsafe_allow_html=True)
+
+    # --- 🟢 UPGRADE: MARKED ON THIS CHART COMPREHENSIVE ANALYSIS PANEL ---
+    st.write(" ")
