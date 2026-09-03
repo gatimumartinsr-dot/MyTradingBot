@@ -5,8 +5,9 @@ import plotly.graph_objects as go
 from datetime import datetime
 import json
 import os
+import time  # FIXED: Added the missing time module import
 
-# Initialize professional theme settings
+# Initialize clean wide workspace layouts
 st.set_page_config(page_title="Helix Multi-Broker Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("""
@@ -35,12 +36,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize Session Data Pools for temporary phone tracking
 if "journal_data" not in st.session_state:
     st.session_state.journal_data = []
 
-# --- NEW: REAL-TIME ACCOUNT SYNC BRIDGE LOADING LAYER ---
-# This looks for live files sent over the internet by your running laptop gateway
+# --- REAL-TIME ACCOUNT SYNC BRIDGE LOADING LAYER ---
 balance_file = "live_balance.json"
 live_balance = 1000.00
 live_equity = 1000.00
@@ -52,7 +51,6 @@ if os.path.exists(balance_file):
     try:
         with open(balance_file, "r") as f:
             data = json.load(f)
-            # If data is fresh (last 60 seconds), update the user interface visuals live
             if time.time() - data.get("timestamp", 0) < 60:
                 live_balance = float(data.get("balance", live_balance))
                 live_equity = float(data.get("equity", live_equity))
@@ -186,3 +184,5 @@ with t_chart:
 # ==================== TAB 4: SETUP GATE ====================
 with t_gate:
     st.subheader("🛡️ Institutional Setup Validation Checklist")
+    r1 = st.checkbox("🔍 Structural footprint has successfully tapped into unmitigated Order Block demand (OB)")
+    r2 = st.checkbox("⚡ Strong momentum expansion displacement left a valid 3-candle Fair Value Gap vacuum (FVG)")
