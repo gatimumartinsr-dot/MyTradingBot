@@ -173,7 +173,6 @@ with t_gate:
     r4 = st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints")
     if r1 and r2 and r3 and r4: st.success("🔓 Setup Authorized! System strategy guidelines fully cleared.")
 
-# ==================== TAB 5: JOURNAL LOGS (FIXED ALL ALIGNMENT CONTROLS) ====================
+# ==================== TAB 5: JOURNAL LOGS (REWRITTEN WITHOUT INDENTATION RISK) ====================
 with t_journal:
     st.subheader("🗒️ Smartphone Active Order Journal")
-    if len(st.session_state.journal_data) > 0:
