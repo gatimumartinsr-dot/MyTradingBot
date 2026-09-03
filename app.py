@@ -5,9 +5,9 @@ import plotly.graph_objects as go
 from datetime import datetime
 import json
 import os
-import time  # FIXED: Added the missing time module import
+import time
 
-# Initialize clean wide workspace layouts
+# Initialize deep dark professional theme layout
 st.set_page_config(page_title="Helix Multi-Broker Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("""
@@ -60,7 +60,7 @@ if os.path.exists(balance_file):
     except Exception:
         pass
 
-# Navigation layout header tabs
+# Navigation layout tabs
 t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
     "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
@@ -149,6 +149,8 @@ with t_chart:
         </div>
     """, unsafe_allow_html=True)
 
+    st.radio("TICKER RADAR ASSIGNMENT", ["XAU", "BTC", "XAG", "EUR", "GBP"], horizontal=True, label_visibility="collapsed")
+
     np.random.seed(42)
     chart_time = pd.date_range(end=datetime.now(), periods=40, freq='15min')
     base_prices = np.sin(np.linspace(0, 4, 40)) * 15 + 2505
@@ -160,12 +162,14 @@ with t_chart:
     fig = go.Figure()
     fig.add_trace(go.Candlestick(x=chart_time[:-1], open=opens, high=highs, low=lows, close=closes, name="Market Price"))
 
-    fig.add_shape(type="rect", x0=chart_time, y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time, y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
+    # Precise Long/Short Risk Range target visualization overlay shapes
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
 
-    fig.add_hline(y=2515.00, line_dash="solid")
-    fig.add_hline(y=2500.00, line_dash="dash")
-    fig.add_hline(y=2495.00, line_dash="dash")
+    # SAFE PRO-FIX: Injecting the reference lines as separate Scatter traces to eliminate the 100% cloud value crash
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2515.00, 2515.00], mode="lines", line=dict(color="#10b981", width=2), name="Take Profit"))
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2500.00, 2500.00], mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"), name="Limit Entry"))
+    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2495.00, 2495.00], mode="lines", line=dict(color="#ef5350", width=2, dash="dot"), name="Stop Loss"))
 
     fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=350, margin=dict(l=5, r=5, t=5, b=5), paper_bgcolor='#0b1116', plot_bgcolor='#0b1116')
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
@@ -179,10 +183,3 @@ with t_chart:
     st.subheader("📝 Setup Structural Confluence Commentary Log")
     st.info("**🛡️ ORDER BLOCK LOCATION CRITERIA:**\n\nPrice printed a high-displacement shift in structure, confirming aggressive institutional accumulation. The origin candle boundary creates a high-probability loading area for market buy triggers.")
     st.warning("**⚡ FAIR VALUE GAP (FVG) VACUUM:**\n\nThe fast price movement generated an efficiency vacuum between Candle 1 and Candle 3. Our entry limits sit right at the top of this vacuum range to capture the retest liquidity phase before trend continuation.")
-    st.error("**🔄 EXECUTION REVERSAL CANDLE LOG:**\n\nOur system strategy guidelines dictate that we monitor the lower execution timeframes for a clean rejection candle footprint (such as a long lower-wick pin bar) inside our zone boundaries before automated trailing protections engage.")
-
-# ==================== TAB 4: SETUP GATE ====================
-with t_gate:
-    st.subheader("🛡️ Institutional Setup Validation Checklist")
-    r1 = st.checkbox("🔍 Structural footprint has successfully tapped into unmitigated Order Block demand (OB)")
-    r2 = st.checkbox("⚡ Strong momentum expansion displacement left a valid 3-candle Fair Value Gap vacuum (FVG)")
