@@ -142,10 +142,9 @@ with t_chart:
     )])
 
     # Precise Long/Short Risk Range target visualization boxes
-    fig.add_shape(type="rect", x0=chart_time[0], y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time[0], y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time, y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time, y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
 
-    # Removed the unstable custom line properties causing Plotly value errors
     fig.add_hline(y=2515.00, line_dash="solid")
     fig.add_hline(y=2500.00, line_dash="dash")
     fig.add_hline(y=2495.00, line_dash="dash")
@@ -174,7 +173,7 @@ with t_gate:
     r4 = st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints")
     if r1 and r2 and r3 and r4: st.success("🔓 Setup Authorized! System strategy guidelines fully cleared.")
 
-# ==================== TAB 5: JOURNAL LOGS ====================
+# ==================== TAB 5: JOURNAL LOGS (FIXED ALL ALIGNMENT CONTROLS) ====================
 with t_journal:
     st.subheader("🗒️ Smartphone Active Order Journal")
-    if st.session_state.journal_data:
+    if len(st.session_state.journal_data) > 0:
