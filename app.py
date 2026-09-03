@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Initialize clean wide layouts
+# Initialize clean wide workspace layouts
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Safe styling block for general dashboard parameters
@@ -46,7 +46,7 @@ if "journal_data" not in st.session_state:
 if "equity_history" not in st.session_state:
     st.session_state.equity_history = [500.0, 505.0, 498.0, 512.0, 525.0]
 
-# --- SLIDING NAV SYSTEMS BAR ---
+# --- PREMIUM TAB NAVIGATION MODULE ARRAYS ---
 t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
     "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
@@ -108,12 +108,12 @@ with t_dashboard:
                 "Take Profit": tp_level,
                 "Allocated Volume": recommended_lots
             }
-            st.session_data = st.session_state.journal_data.append(new_record)
+            st.session_state.journal_data.append(new_record)
             st.session_state.equity_history.append(st.session_state.equity_history[-1] + 18.50)
             st.balloons()
             st.success("✅ Trade matrix entry logged successfully. Inputs completely cleared for your next setup configuration!")
 
-# ==================== TAB 3: CHART ====================
+# ==================== TAB 3: VISUAL POSITION CHART & ANALYSIS JOURNAL ====================
 with t_chart:
     st.markdown("""
         <div class="header-box">
@@ -129,6 +129,7 @@ with t_chart:
 
     st.radio("TICKER RADAR ASSIGNMENT", ["XAU", "BTC", "XAG", "EUR", "GBP"], horizontal=True, label_visibility="collapsed")
 
+    # Generating Candle Vector Matrices
     np.random.seed(88)
     chart_time = pd.date_range(end=datetime.now(), periods=40, freq='15min')
     base_prices = np.sin(np.linspace(0, 4, 40)) * 25 + 3410
@@ -143,13 +144,15 @@ with t_chart:
         increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
     )])
 
-    fig.add_shape(type="rect", x0=chart_time, y0=3412.00, x1=chart_time[-1], y1=3460.00, fillcolor="rgba(16, 185, 129, 0.15)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time, y0=3392.00, x1=chart_time[-1], y1=3412.00, fillcolor="rgba(239, 83, 80, 0.15)", line=dict(width=0))
+    # Long Position Boxes Overlays
+    fig.add_shape(type="rect", x0=chart_time[0], y0=3412.00, x1=chart_time[-1], y1=3460.00, fillcolor="rgba(16, 185, 129, 0.15)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=3392.00, x1=chart_time[-1], y1=3412.00, fillcolor="rgba(239, 83, 80, 0.15)", line=dict(width=0))
 
-    fig.add_hline(y=3460.00, line_dash="solid", line_color="#10b981", annotation_text="TP TARGET: 3,460.00", annotation_position="top right")
-    fig.add_hline(y=3412.00, line_dash="dash", line_color="#3b82f6", annotation_text="LIMIT ENTRY: 3,412.00", annotation_position="top right")
-    fig.add_hline(y=3405.00, line_dash="solid", line_color="#fbbf24", annotation_text="INSTITUTIONAL ORDER BLOCK ZONE", annotation_position="bottom right")
-    fig.add_hline(y=3392.00, line_dash="dash", line_color="#ef5350", annotation_text="RISK SL: 3,392.00", annotation_position="bottom right")
+    # Cleaned Layout Lines (No unstable embedded chart label properties to trigger errors)
+    fig.add_hline(y=3460.00, line_dash="solid", line_color="#10b981")
+    fig.add_hline(y=3412.00, line_dash="dash", line_color="#3b82f6")
+    fig.add_hline(y=3405.00, line_dash="solid", line_color="#fbbf24")
+    fig.add_hline(y=3392.00, line_dash="dash", line_color="#ef5350")
 
     fig.update_layout(
         template="plotly_dark", xaxis_rangeslider_visible=False, height=390,
@@ -157,6 +160,13 @@ with t_chart:
         xaxis=dict(showgrid=False), yaxis=dict(showgrid=True, gridcolor='#1f2d3d')
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    # Side-by-side indicator parameter status legend cards block
+    col_lbl1, col_lbl2, col_lbl3, col_lbl4 = st.columns(4)
+    with col_lbl1: st.success("🎯 TP TARGET: 3,460.00")
+    with col_lbl2: st.info("🔵 LIMIT ENTRY: 3,412.00")
+    with col_lbl3: st.warning("💛 ORDER BLOCK ZONE")
+    with col_lbl4: st.error("🛑 RISK SL: 3,392.00")
 
     st.write(" ")
     st.subheader("📝 Setup Structural Confluence Commentary Log")
