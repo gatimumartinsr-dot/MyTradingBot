@@ -141,13 +141,14 @@ with t_chart:
         increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
     )])
 
-    # Precise Long/Short Risk Range target visualization overlay geometry shapes
-    fig.add_shape(type="rect", x0=chart_time, y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time, y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
+    # Precise Long/Short Risk Range target visualization boxes
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time[0], y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
 
-    fig.add_hline(y=2515.00, line_dash="solid", line_color="#10b981")
-    fig.add_hline(y=2500.00, line_dash="dash", line_color="#3b82f6")
-    fig.add_hline(y=2495.00, line_dash="dash", line_color="#ef5350")
+    # Removed the unstable custom line properties causing Plotly value errors
+    fig.add_hline(y=2515.00, line_dash="solid")
+    fig.add_hline(y=2500.00, line_dash="dash")
+    fig.add_hline(y=2495.00, line_dash="dash")
 
     fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=350, margin=dict(l=5, r=5, t=5, b=5), paper_bgcolor='#0b1116', plot_bgcolor='#0b1116')
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
@@ -173,6 +174,7 @@ with t_gate:
     r4 = st.checkbox("📊 Relative Strength Index (RSI 14) confirms clean structural momentum footprints")
     if r1 and r2 and r3 and r4: st.success("🔓 Setup Authorized! System strategy guidelines fully cleared.")
 
-# ==================== TAB 5: JOURNAL LOGS (FIXED INDENTATION) ====================
+# ==================== TAB 5: JOURNAL LOGS ====================
 with t_journal:
     st.subheader("🗒️ Smartphone Active Order Journal")
+    if st.session_state.journal_data:
