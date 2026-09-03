@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Initialize deep dark professional theme wrapper configuration elements
+# Initialize clean wide layouts
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("""
@@ -58,13 +58,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Persistent storage engine arrays mapping data fields cleanly
 if "journal_data" not in st.session_state:
     st.session_state.journal_data = []
 if "equity_history" not in st.session_state:
     st.session_state.equity_history = [500.0, 505.0, 498.0, 512.0, 525.0]
 
-# --- SLIDING TAB NAVIGATION MODULE SYSTEMS ---
+# --- SLIDING NAV SYSTEMS BAR ---
 t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
     "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
@@ -77,10 +76,8 @@ with t_signin:
     
     broker_select = st.radio("SELECT BROKER ARCHITECTURE", ["Exness", "IC Markets", "Pepperstone"], horizontal=True)
     st.write(" ")
-    
     acc_num = st.text_input("ACCOUNT ID METRIC", value="474239881", type="password", placeholder="Enter Account Identification Number")
     acc_pass = st.text_input("TRADING EXECUTION TERMINAL PASSWORD", value="ExnessSecret2026", type="password", placeholder="••••••••••••")
-    
     st.write(" ")
     acc_type = st.radio("SERVER SELECTION ENVIRONMENT", ["Demo Environment sandbox", "Live Market Pipelines"], horizontal=True)
     st.write(" ")
@@ -133,7 +130,7 @@ with t_dashboard:
             st.balloons()
             st.success("✅ Trade matrix entry logged successfully. Inputs completely cleared for your next setup configuration!")
 
-# ==================== TAB 3: VISUAL POSITION CHART & ANALYSIS JOURNAL ====================
+# ==================== TAB 3: CHART ====================
 with t_chart:
     st.markdown("""
         <div class="header-box">
@@ -149,7 +146,6 @@ with t_chart:
 
     st.radio("TICKER RADAR ASSIGNMENT", ["XAU", "BTC", "XAG", "EUR", "GBP"], horizontal=True, label_visibility="collapsed")
 
-    # Generating Candle Vector Matrices
     np.random.seed(88)
     chart_time = pd.date_range(end=datetime.now(), periods=40, freq='15min')
     base_prices = np.sin(np.linspace(0, 4, 40)) * 25 + 3410
@@ -164,7 +160,6 @@ with t_chart:
         increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350'
     )])
 
-    # Long Position Boxes Overlays
     fig.add_shape(type="rect", x0=chart_time[0], y0=3412.00, x1=chart_time[-1], y1=3460.00, fillcolor="rgba(16, 185, 129, 0.15)", line=dict(width=0))
     fig.add_shape(type="rect", x0=chart_time[0], y0=3392.00, x1=chart_time[-1], y1=3412.00, fillcolor="rgba(239, 83, 80, 0.15)", line=dict(width=0))
 
@@ -187,5 +182,4 @@ with t_chart:
         <div class="journal-box">
             <h5 style='color:#60a5fa; margin-bottom:5px; font-family:monospace;'>🛡️ WHY WAS THIS ORDER BLOCK TAKEN?</h5>
             <p style='color:#d1d5db; font-size:14px; margin-top:0;'>Price generated a significant high-volume displacement upwards, violently breaking past the previous minor swing structure (BOS Confirmed). This left a highly defined, unmitigated institutional footprint candle block at the origin point ($3,405.00) which serves as our major structural demand loading area.</p>
-            
             <h5 style='color:#fbbf24; margin-bottom:5px; font-family:monospace;'>⚡ WHY WAS THIS SPECIFIC FVG DRIVEN AS AN ENTRY ZONE?</h5>
