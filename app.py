@@ -3,8 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
+import json
+import os
 
-# Initialize clean wide workspace layouts
+# Initialize professional theme settings
 st.set_page_config(page_title="Helix Multi-Broker Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("""
@@ -33,12 +35,34 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Initialize Session Data Pools for temporary phone tracking
 if "journal_data" not in st.session_state:
     st.session_state.journal_data = []
-if "equity_history" not in st.session_state:
-    st.session_state.equity_history = [1000.0]
 
-# --- SLIDING NAV CORES SYSTEMS NAVIGATION TABS ---
+# --- NEW: REAL-TIME ACCOUNT SYNC BRIDGE LOADING LAYER ---
+# This looks for live files sent over the internet by your running laptop gateway
+balance_file = "live_balance.json"
+live_balance = 1000.00
+live_equity = 1000.00
+live_profit = 0.00
+account_status = "⚫ OFFLINE (SIMULATION MODE)"
+status_color = "#9ca3af"
+
+if os.path.exists(balance_file):
+    try:
+        with open(balance_file, "r") as f:
+            data = json.load(f)
+            # If data is fresh (last 60 seconds), update the user interface visuals live
+            if time.time() - data.get("timestamp", 0) < 60:
+                live_balance = float(data.get("balance", live_balance))
+                live_equity = float(data.get("equity", live_equity))
+                live_profit = float(data.get("profit", live_profit))
+                account_status = f"🟢 LIVE SYNCED (MT5 ID: {data.get('login')})"
+                status_color = "#10b981"
+    except Exception:
+        pass
+
+# Navigation layout header tabs
 t_signin, t_dashboard, t_chart, t_gate, t_journal, t_rules, t_connections = st.tabs([
     "📂 SIGN IN", "📊 DASHBOARD", "📈 CHART", "🛡️ SETUP GATE", 
     "🗒️ JOURNAL", "📜 RULES", "🔌 CONNECTIONS"
@@ -63,17 +87,18 @@ with t_signin:
     st.write(" ")
     if st.button("Link Live Broker Pipeline Stream", key="btn_broker_auth"):
         if acc_num and acc_pass and acc_server:
-            st.success(f"🔒 Pipeline authorized! Streamlit Cloud is now listening for webhook data packets from {broker_select} Server: {acc_server}")
+            st.success(f"🔒 Pipeline authorized! App is listening for background gateway links from your laptop...")
         else:
             st.error("Please fill in your explicit login credentials and server paths to open authentication gates.")
 
 # ==================== TAB 2: AUTOMATED DASHBOARD FORM ====================
 with t_dashboard:
+    st.markdown(f"Status: <span style='color:{status_color}; font-family:monospace; font-weight:600;'>{account_status}</span>", unsafe_allow_html=True)
     st.subheader("📊 Cross-Broker Account Status Monitor")
     m_col1, m_col2, m_col3 = st.columns(3)
-    with m_col1: st.metric(label="Account Balance", value=f"${st.session_state.equity_history[-1]:.2f}")
-    with m_col2: st.metric(label="Floating Equity", value=f"${st.session_state.equity_history[-1]:.2f}")
-    with m_col3: st.metric(label="Active Open Profit/Loss", value="$0.00")
+    with m_col1: st.metric(label="Account Balance", value=f"${live_balance:.2f}")
+    with m_col2: st.metric(label="Floating Equity", value=f"${live_equity:.2f}")
+    with m_col3: st.metric(label="Active Open Profit/Loss", value=f"${live_profit:.2f}", delta=f"${live_profit:.2f}" if live_profit != 0 else None)
         
     st.divider()
     st.subheader("🤖 Strategy Execution Blueprint Matrix")
@@ -95,7 +120,7 @@ with t_dashboard:
         if submit_btn:
             pips_delta = abs(entry_level - sl_level)
             calculated_pips = pips_delta * 10 if "XAU" in target_pair else pips_delta * 10000
-            risk_amount = st.session_state.equity_history[-1] * (risk_pct / 100)
+            risk_amount = live_balance * (risk_pct / 100)
             lot_size = risk_amount / (calculated_pips * 2.0) if "XAU" in target_pair else risk_amount / (calculated_pips * 10.0)
             recommended_lots = max(0.01, round(lot_size, 2))
             
@@ -109,9 +134,8 @@ with t_dashboard:
                 "Allocated Volume": recommended_lots
             }
             st.session_state.journal_data.append(new_record)
-            st.session_state.equity_history.append(st.session_state.equity_history[-1] + 25.00)
             st.balloons()
-            st.success("✅ Trade matrix entry logged successfully. Inputs completely cleared for your next setup configuration!")
+            st.success("✅ Trade matrix entry logged successfully into your smartphone journal tab!")
 
 # ==================== TAB 3: PROF CHART CANVAS & REASONS LOG ====================
 with t_chart:
@@ -136,23 +160,14 @@ with t_chart:
     lows = np.minimum(opens, closes) - np.random.uniform(1, 3, 39)
 
     fig = go.Figure()
+    fig.add_trace(go.Candlestick(x=chart_time[:-1], open=opens, high=highs, low=lows, close=closes, name="Market Price"))
 
-    # Add the core candlestick data
-    fig.add_trace(go.Candlestick(
-        x=chart_time[:-1], open=opens, high=highs, low=lows, close=closes,
-        increasing_line_color='#10b981', decreasing_line_color='#ef5350',
-        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef5350',
-        name="Market Price"
-    ))
+    fig.add_shape(type="rect", x0=chart_time, y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
+    fig.add_shape(type="rect", x0=chart_time, y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
 
-    # Precise Long/Short Risk Range target visualization boxes
-    fig.add_shape(type="rect", x0=chart_time[0], y0=2500.00, x1=chart_time[-1], y1=2515.00, fillcolor="rgba(16, 185, 129, 0.12)", line=dict(width=0))
-    fig.add_shape(type="rect", x0=chart_time[0], y0=2495.00, x1=chart_time[-1], y1=2500.00, fillcolor="rgba(239, 83, 80, 0.12)", line=dict(width=0))
-
-    # SAFE FIX: Add the institutional levels as stable linear traces instead of standalone add_hline tools
-    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2515.00, 2515.00], mode="lines", line=dict(color="#10b981", width=2), name="Take Profit"))
-    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2500.00, 2500.00], mode="lines", line=dict(color="#3b82f6", width=2, dash="dash"), name="Limit Entry"))
-    fig.add_trace(go.Scatter(x=[chart_time[0], chart_time[-1]], y=[2495.00, 2495.00], mode="lines", line=dict(color="#ef5350", width=2, dash="dot"), name="Stop Loss"))
+    fig.add_hline(y=2515.00, line_dash="solid")
+    fig.add_hline(y=2500.00, line_dash="dash")
+    fig.add_hline(y=2495.00, line_dash="dash")
 
     fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False, height=350, margin=dict(l=5, r=5, t=5, b=5), paper_bgcolor='#0b1116', plot_bgcolor='#0b1116')
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
@@ -164,7 +179,6 @@ with t_chart:
 
     st.write(" ")
     st.subheader("📝 Setup Structural Confluence Commentary Log")
-    
     st.info("**🛡️ ORDER BLOCK LOCATION CRITERIA:**\n\nPrice printed a high-displacement shift in structure, confirming aggressive institutional accumulation. The origin candle boundary creates a high-probability loading area for market buy triggers.")
     st.warning("**⚡ FAIR VALUE GAP (FVG) VACUUM:**\n\nThe fast price movement generated an efficiency vacuum between Candle 1 and Candle 3. Our entry limits sit right at the top of this vacuum range to capture the retest liquidity phase before trend continuation.")
     st.error("**🔄 EXECUTION REVERSAL CANDLE LOG:**\n\nOur system strategy guidelines dictate that we monitor the lower execution timeframes for a clean rejection candle footprint (such as a long lower-wick pin bar) inside our zone boundaries before automated trailing protections engage.")
@@ -172,5 +186,3 @@ with t_chart:
 # ==================== TAB 4: SETUP GATE ====================
 with t_gate:
     st.subheader("🛡️ Institutional Setup Validation Checklist")
-    r1 = st.checkbox("🔍 Structural footprint has successfully tapped into unmitigated Order Block demand (OB)")
-    r2 = st.checkbox("⚡ Strong momentum expansion displacement left a valid 3-candle Fair Value Gap vacuum (FVG)")
