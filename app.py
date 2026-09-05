@@ -8,13 +8,28 @@ from bot import calculate_position_size, dispatch_order
 # Configuration setup for the institutional terminal look
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
+# Global UI Style Override for Dark Premium Theme
+st.markdown("""
+<style>
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background-color: #0d1117 !important;
+    }
+    div.stMetric {
+        background-color: #161b22 !important;
+        padding: 15px !important;
+        border-radius: 8px !important;
+        border-left: 5px solid #00ff99 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Initialize secure session states for login persistence
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# 👥 INITIALIZE EXECUTOR SYSTEM REGISTER DATABASE
+# 👥 INITIALIZE EXECUTOR SYSTEM REGISTER DATABASE (Persistent during runtime)
 if "user_database" not in st.session_state:
     st.session_state.user_database = {
         "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com", "joined": "2026-09-05 12:00"}
@@ -102,7 +117,7 @@ else:
         st.subheader("⚡ Order Execution Coordinates")
         col_as1, col_as2 = st.columns(2)
         with col_as1:
-            asset_symbol = st.text_input("Asset Instrument Symbol", value="XAUUSD")
+            asset_symbol = st.text_input("Asset Instrument Symbol", value="XAUUSDm")
         with col_as2:
             asset_class = st.selectbox("Asset Class Tier", ["Precious Metals (Gold/Silver)", "Major Forex Pairs", "Crypto / Digital Assets"])
             
@@ -118,7 +133,9 @@ else:
 
     with col2:
         st.subheader("🧮 Algorithmic Risk Analytics")
-        if "Precious" in asset_class:
+        
+        # Calculate Pips dynamically based on Asset Class Selection
+        if "Precious" in asset_class or "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper():
             pips_distance = abs(entry_target - sl_target) * 10
             reward_pips = abs(tp_target - entry_target) * 10
         elif "Forex" in asset_class:
@@ -131,10 +148,11 @@ else:
         if pips_distance == 0: pips_distance = 1.0
         rr_ratio = reward_pips / pips_distance
 
+        # Fetch lot parameters without typing mismatch bugs
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
         
-        st.metric(label="Automated Size Blueprint", value=f"{calculated_lots} Lots")
-        st.success(f"Strategy Matrix: {matrix_label}")
+        st.metric(label="Calculated Order Volume Blueprint", value=f"{calculated_lots} Lots")
+        st.success(f"Strategy Engine Status: {matrix_label}")
         st.info(f"Target Structure Risk: {pips_distance:.1f} Pips | Risk-to-Reward Ratio: 1:{rr_ratio:.2f}")
 
     st.markdown("---")
@@ -148,6 +166,9 @@ else:
 
     with tab1:
         st.subheader("📊 Interactive Order Block Visualizer Mapping")
+        position_type = "Long Position" if direction == "BUY" else "Short Position"
+        st.caption(f"Visualizing Projection Coordinates for an automated **{direction} ({position_type})** sequence on **{asset_symbol}**")
+        
         x_ticks = np.arange(1, 26)
         y_market = np.sin(x_ticks / 3) * (entry_target * 0.002) + entry_target
         fig = go.Figure()
@@ -160,15 +181,3 @@ else:
             fig.add_shape(type="rect", x0=1, x1=25, y0=entry_target, y1=sl_target, fillcolor="rgba(255, 75, 75, 0.15)", line_width=0)
             
         fig.add_trace(go.Scatter(x=x_ticks, y=y_market, mode='lines', name='Live Asset Price Feed', line=dict(color='#888888', width=1.5)))
-        fig.add_hline(y=entry_target, line_dash="dash", line_color="#00ff99", annotation_text="ENTRY TARGET")
-        fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS")
-        fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT")
-        fig.update_layout(template="plotly_dark", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig, use_container_width=True)
-
-    with tab2:
-        st.subheader("🔎 Intelligence & Rulebook Verification")
-        col_rl1, col_rl2 = st.columns(2)
-        with col_rl1:
-            st.info(f"Gold Progression Guide: Target Account size configuration balance reads ${account_balance:.2f}. Volume assignments accurately follow your preferred {progression_tier} rules book to minimize manual lot-sizing volatility risk parameters completely.")
-
