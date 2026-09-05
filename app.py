@@ -8,7 +8,7 @@ from bot import calculate_position_size, dispatch_order
 # Configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
+# Premium Custom CSS Injection - Clean, single-line text variables that can never crash
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
 # Initialize secure session states for login and working orders database persistence
@@ -88,8 +88,6 @@ else:
 
     # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
-    
-    # 🌐 DYNAMIC BROKER SELECTION MODIFIED TO ALLOW ANY USER DEFINED SERVER
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
     
@@ -147,7 +145,13 @@ else:
             # SYNCHRONIZED CALIBRATION MATCH: Passing exactly 5 arguments to align with bot.py
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
             
-            st.markdown(f"""
-            <div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433;'>
-                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT blueprintVOLUME</p>
-                <p style='margin:2px 0 10px 0; font-size: 26px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
+            st.info(f"Lot Size Target Blueprint: {calculated_lots} Lots")
+            st.success(f"Risk Matrix Floor: 1:{rr_ratio:.1f} RR | Width: {pips_distance:.1f} Pips")
+            st.caption(f"Engine Validation: {matrix_label}")
+
+        st.markdown("---")
+        st.subheader(f"📈 Candlestick Level Visualizer Mapping — {asset_symbol}")
+        x_ticks = np.arange(1, 31)
+        y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
+        
+        is_buy = "BUY" in direction
