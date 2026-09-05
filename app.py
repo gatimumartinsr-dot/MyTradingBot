@@ -162,7 +162,6 @@ else:
 
     with tab3:
         st.caption("Active Secure Memory Matrix — Session Order Parameter Blocks")
-        # Flattened row dictionary allocation structure to prevent multi-line syntax glitches
         row_dict = {
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "Broker": str(broker_choice),
@@ -178,6 +177,5 @@ else:
     
     # --- PIPELINE DISPATCH PROCESSOR ---
     if st.button("🚀 Authorize Gateway and Dispatch Order Matrix", type="primary", use_container_width=True):
-        with st.spinner(f"Routing transmission packets to {broker_choice} servers..."):
-            execution_response = dispatch_order(
-                login_id=broker_account,
+        with st.spinner("Routing transmission packets to networks..."):
+            execution_response = dispatch_order(broker_account, broker_password, broker_server, asset_symbol, direction, entry_target, sl_target, tp_target, calculated_lots, broker_choice)
