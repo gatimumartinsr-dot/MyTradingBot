@@ -121,58 +121,63 @@ else:
         position_type = "Long Position Layout Block" if direction == "BUY" else "Short Position Layout Block"
         st.caption(f"Visualizing Order Parameters for an automated **{direction} ({position_type})** sequence on **{asset_symbol}**")
         
-        # Simulate active market chart baseline candles
         x_ticks = np.arange(1, 26)
         y_market = np.sin(x_ticks / 3) * (entry_target * 0.002) + entry_target
         
         fig = go.Figure()
         
-        # Plotly chart layer layout drawing rules
         if direction == "BUY":
-            # Highlight target take profit block field with green fill overlays
             fig.add_shape(type="rect", x0=1, x1=25, y0=entry_target, y1=tp_target, fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
-            # Highlight stop loss target block field with warning red fill overlays
             fig.add_shape(type="rect", x0=1, x1=25, y0=sl_target, y1=entry_target, fillcolor="rgba(255, 75, 75, 0.15)", line_width=0)
         else:
-            # Short / SELL projection coordinate overlay fills inverted
             fig.add_shape(type="rect", x0=1, x1=25, y0=tp_target, y1=entry_target, fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
             fig.add_shape(type="rect", x0=1, x1=25, y0=entry_target, y1=sl_target, fillcolor="rgba(255, 75, 75, 0.15)", line_width=0)
             
-        # Draw explicit level lines across price coordinates
         fig.add_trace(go.Scatter(x=x_ticks, y=y_market, mode='lines', name='Live Asset Price Feed', line=dict(color='#888888', width=1.5)))
-        fig.add_hline(y=entry_target, line_dash="dash", line_color="#00ff99", annotation_text="ENTRY TARGET", annotation_position="top left")
-        fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS (RISK BOUND)", annotation_position="bottom left")
-        fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT LIMIT", annotation_position="top right")
+        fig.add_hline(y=entry_target, line_dash="dash", line_color="#00ff99", annotation_text="ENTRY TARGET")
+        fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS")
+        fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT")
         
         fig.update_layout(template="plotly_dark", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
 
     with tab2:
         st.subheader("🔎 Intelligence & Rulebook Verification")
-        
         col_rl1, col_rl2 = st.columns(2)
         with col_rl1:
             st.markdown(f"""
             <div style='background-color: #1a1c23; padding: 15px; border-radius: 8px; border-left: 5px solid #00ff99;'>
                 <p><strong>Gold Progression Guide Analysis:</strong> Your account size configuration is currently reading <strong>${account_balance:.2f}</strong>.</p>
-                <p>To avoid local infrastructure broker lock restrictions on small balances, volume assignments map exactly to your preferred <strong>{progression_tier} Matrix</strong> rules guidelines to balance consistency without trailing drawdowns.</p>
+                <p>To avoid local infrastructure broker lock restrictions on small balances, volume assignments map exactly to your preferred <strong>{progression_tier} Matrix</strong> rules guidelines.</p>
             </div>
             """, unsafe_allow_html=True)
             
         with col_rl2:
-            rule1 = "✅ Risk Tier Checked (Within Allocation Matrix Bounds)"
-            rule2 = "✅ Risk-to-Reward Ratio Valid (> 1:1.5)" if rr_ratio >= 1.5 else "⚠️ Low Reward-to-Risk Ratio Window Warning"
-            rule3 = f"✅ Sandboxed Gateway Routing Isolation Armed for {st.session_state.username}"
-            rule4 = f"✅ Cloud Gateway Target Pipeline: {broker_choice} [{account_environment.upper()}]"
-            
             st.markdown(f"""
-            * {rule1}
-            * {rule2}
-            * {rule3}
-            * {rule4}
+            * ✅ Risk Tier Checked (Within Allocation Matrix Bounds)
+            * ✅ Risk-to-Reward Ratio Valid (> 1:1.5)
+            * ✅ Sandboxed Gateway Routing Isolation Armed for {st.session_state.username}
+            * ✅ Cloud Gateway Target Pipeline: {broker_choice} [{account_environment.upper()}]
             """)
 
     with tab3:
         st.caption("Active Secure Memory Matrix — Session Order Parameter Blocks")
-        journal_data = pd.DataFrame([{
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"), 
+        # Flattened row dictionary allocation structure to prevent multi-line syntax glitches
+        row_dict = {
+            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "Broker": str(broker_choice),
+            "Env": "DEMO" if "Demo" in account_environment else "LIVE",
+            "Account": str(broker_account),
+            "Asset": str(asset_symbol),
+            "Action": f"{direction} LIMIT",
+            "Volume": float(calculated_lots)
+        }
+        st.dataframe(pd.DataFrame([row_dict]), use_container_width=True)
+
+    st.markdown("---")
+    
+    # --- PIPELINE DISPATCH PROCESSOR ---
+    if st.button("🚀 Authorize Gateway and Dispatch Order Matrix", type="primary", use_container_width=True):
+        with st.spinner(f"Routing transmission packets to {broker_choice} servers..."):
+            execution_response = dispatch_order(
+                login_id=broker_account,
