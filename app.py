@@ -9,7 +9,7 @@ from bot import calculate_position_size, dispatch_order
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
-st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
 # Initialize secure session states for login and working orders database persistence
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
@@ -147,8 +147,10 @@ else:
         x_ticks = np.arange(1, 31)
         y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
         
+        # 🟢 FLAT ERROR-PROOF PLOTLY LAYER
+        # Reconfigured math to evaluate colors directly in a list to completely bypass nested logic blocks
+        is_buy = "BUY" in direction
+        shade_color_top = "rgba(0, 255, 153, 0.08)" if is_buy else "rgba(255, 75, 75, 0.08)"
+        shade_color_bottom = "rgba(255, 75, 75, 0.08)" if is_buy else "rgba(0, 255, 153, 0.08)"
+        
         fig = go.Figure()
-        if "BUY" in direction:
-            fig.add_shape(type="rect", x0=1, x1=30, y0=entry_target, y1=tp_target, fillcolor="rgba(0, 255, 153, 0.08)", line_width=0)
-            fig.add_shape(type="rect", x0=1, x1=30, y0=sl_target, y1=entry_target, fillcolor="rgba(255, 75, 75, 0.08)", line_width=0)
-        else:
