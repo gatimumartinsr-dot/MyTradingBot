@@ -15,10 +15,9 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # 👥 INITIALIZE EXECUTOR SYSTEM REGISTER DATABASE
-# This stores accounts created on the fly during this runtime session
 if "user_database" not in st.session_state:
     st.session_state.user_database = {
-        "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com"}
+        "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com", "joined": "2026-09-05 12:00"}
     }
 
 # --- APPLICATION ROUTING LOGIC ---
@@ -30,7 +29,6 @@ if not st.session_state.logged_in:
     
     auth_col1, auth_col2, auth_col3 = st.columns([1, 1.4, 1])
     with auth_col2:
-        # Toggle switch between Sign In and Registration
         gate_mode = st.radio("Choose Terminal Action", ["Sign In to Workspace", "Register New Trader Account"], horizontal=True)
         st.markdown("---")
 
@@ -40,7 +38,6 @@ if not st.session_state.logged_in:
             pass_input = st.text_input("Access Password", type="password").strip()
             
             if st.button("Authorize Connection Session", type="primary", use_container_width=True):
-                # Validate against the dynamic dynamic session register
                 if user_input in st.session_state.user_database and st.session_state.user_database[user_input]["password"] == pass_input:
                     st.session_state.logged_in = True
                     st.session_state.username = user_input
@@ -61,11 +58,11 @@ if not st.session_state.logged_in:
                 elif reg_user in st.session_state.user_database:
                     st.error("This username is already taken. Please choose another one.")
                 else:
-                    # Save user metrics directly into background registration database maps
                     st.session_state.user_database[reg_user] = {
                         "password": reg_pass,
                         "name": reg_name,
-                        "email": reg_email
+                        "email": reg_email,
+                        "joined": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
                     st.success(f"🎉 Account created successfully for {reg_name}! You can now switch to 'Sign In to Workspace' above and log in.")
                     st.balloons()
@@ -86,8 +83,6 @@ else:
     # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.selectbox("Select Target Broker", ["Exness Global", "IC Markets", "Pepperstone", "Generic MT5 Server Gateway"])
-    
-    # 🔘 LIVE VS DEMO SERVER MATRIX SELECTION
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
     
     broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
@@ -97,8 +92,6 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     session_mode = st.sidebar.selectbox("Enforce Session Timing Window", ["Disable Filter", "Power Hour (Institutional Volume)", "London Open Block", "NY Session Block"])
-    
-    # Lot Progression Mode Picker (Synced directly to your custom rule guidelines sheet)
     progression_tier = st.sidebar.selectbox("Gold Progression Tier Rulebook", ["Conservative (1-2% Matrix)", "Medium (3-5% Balanced)", "Aggressive (8-10% High Yield)"])
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, max_value=100000.0, value=100.0, step=100.0)
 
@@ -107,7 +100,6 @@ else:
 
     with col1:
         st.subheader("⚡ Order Execution Coordinates")
-        
         col_as1, col_as2 = st.columns(2)
         with col_as1:
             asset_symbol = st.text_input("Asset Instrument Symbol", value="XAUUSD")
@@ -126,8 +118,6 @@ else:
 
     with col2:
         st.subheader("🧮 Algorithmic Risk Analytics")
-        
-        # Relative Structural Pip Distance Formula Logic
         if "Precious" in asset_class:
             pips_distance = abs(entry_target - sl_target) * 10
             reward_pips = abs(tp_target - entry_target) * 10
@@ -141,26 +131,27 @@ else:
         if pips_distance == 0: pips_distance = 1.0
         rr_ratio = reward_pips / pips_distance
 
-        # Fetch custom progression lot sizes calculated via backend database rule mappings
+        # FIXED ARGS FLOW MATRIX: Passing variables correctly into backend calculations
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
         
-        st.metric(label=f"Automated Size Blueprint ({matrix_label})", value=f"{calculated_lots} Lots")
-        st.success(f"Execution Target Environment: {account_environment}")
+        st.metric(label=f"Automated Size Blueprint", value=f"{calculated_lots} Lots")
+        st.success(f"Strategy Matrix: {matrix_label}")
         st.info(f"Target Structure Risk: {pips_distance:.1f} Pips | Risk-to-Reward Ratio: 1:{rr_ratio:.2f}")
 
     st.markdown("---")
 
-    # --- THE UPGRADED MULTI-PANEL DESK GRAPHICS TAB INTERFACE ---
-    tab1, tab2, tab3 = st.tabs(["📉 Institutional Charts & Liquidity Analysis", "📋 Strict Rules Breakdown Protocol", "🗒 Active Live Trade Journal"])
+    # --- DYNAMIC INTERACTIVE MULTI-TAB WORKSPACE ---
+    # CONDITIONAL WORKSPACE NAVIGATION BAR: Reveals administrative metrics dashboard tab ONLY if you log in as master 'martins'
+    if st.session_state.username == "martins":
+        tab1, tab2, tab3, tab4 = st.tabs(["📉 Institutional Charts", "📋 Strategy Rulebook Protocols", "🗒 Active Live Trade Journal", "🔒 EXECUTIVE USER ACCESS REGISTRY PANEL"])
+    else:
+        tab1, tab2, tab3 = st.tabs(["📉 Institutional Charts", "📋 Strategy Rulebook Protocols", "🗒 Active Live Trade Journal"])
+        tab4 = None
 
     with tab1:
         st.subheader("📊 Interactive Order Block Visualizer Mapping")
-        position_type = "Long Position Layout Block" if direction == "BUY" else "Short Position Layout Block"
-        st.caption(f"Visualizing Order Parameters for an automated **{direction} ({position_type})** sequence on **{asset_symbol}**")
-        
         x_ticks = np.arange(1, 26)
         y_market = np.sin(x_ticks / 3) * (entry_target * 0.002) + entry_target
-        
         fig = go.Figure()
         
         if direction == "BUY":
@@ -174,4 +165,11 @@ else:
         fig.add_hline(y=entry_target, line_dash="dash", line_color="#00ff99", annotation_text="ENTRY TARGET")
         fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS")
         fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT")
-        
+        fig.update_layout(template="plotly_dark", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
+        st.subheader("🔎 Intelligence & Rulebook Verification")
+        col_rl1, col_rl2 = st.columns(2)
+        with col_rl1:
+            st.markdown(f"""
