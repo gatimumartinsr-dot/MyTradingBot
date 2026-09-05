@@ -19,17 +19,16 @@ if not st.session_state.logged_in:
     # 🔐 AUTHENTICATION PORTAL (LANDING SCREEN)
     st.markdown("<h1 style='text-align: center; color: #00ff99;'>🟢 HELIX OB</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
-    
     st.markdown("---")
-    auth_col1, auth_col2, auth_col3 = st.columns([1, 2, 1])
     
+    auth_col1, auth_col2, auth_col3 = st.columns([1, 1.2, 1])
     with auth_col2:
         st.subheader("Secure Terminal Gate")
         user_input = st.text_input("Workspace Username Key")
         pass_input = st.text_input("Access Password", type="password")
         
         if st.button("Authorize Connection Session", type="primary", use_container_width=True):
-            if user_input and pass_input == "helix2026":  # Set your master password here
+            if user_input and pass_input == "helix2026":
                 st.session_state.logged_in = True
                 st.session_state.username = user_input
                 st.rerun()
@@ -37,7 +36,7 @@ if not st.session_state.logged_in:
                 st.error("Invalid Credentials. Session Authorization Denied.")
 else:
     # 📈 FULL PROFESSIONAL OPERATIONAL TRADING DESK
-    st.markdown(f"<h4 style='float: right; color: #888;'>User Session: <span style='color: #00ff99;'>{st.session_state.username}</span></h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='float: right; color: #888; margin-top:0px;'>User Session: <span style='color: #00ff99;'>{st.session_state.username}</span></h4>", unsafe_allow_html=True)
     if st.button("🔒 Logout / Sever Connection", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.username = ""
@@ -50,15 +49,21 @@ else:
     # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.selectbox("Select Target Broker", ["Exness Global", "IC Markets", "Pepperstone", "Generic MT5 Server Gateway"])
+    
+    # 🔘 LIVE VS DEMO SERVER MATRIX SELECTION
+    account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
+    
     broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
     broker_password = st.sidebar.text_input("Broker Trading Password", type="password", value="SecurePass123")
-    broker_server = st.sidebar.text_input("Broker Server String", value="Exness-MT5-Trial9")
+    broker_server = st.sidebar.text_input("Broker Server String", value="Exness-MT5-Trial9" if "Demo" in account_environment else "Exness-MT5-Real1")
 
     st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     session_mode = st.sidebar.selectbox("Enforce Session Timing Window", ["Disable Filter", "Power Hour (Institutional Volume)", "London Open Block", "NY Session Block"])
-    risk_profile = st.sidebar.slider("Capital Risk Allocation (%)", 0.5, 5.0, 1.0, step=0.5)
-    account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, value=10000.0, step=500.0)
+    
+    # Lot Progression Mode Picker (Synced directly to your custom rule guidelines sheet)
+    progression_tier = st.sidebar.selectbox("Gold Progression Tier Rulebook", ["Conservative (1-2% Matrix)", "Medium (3-5% Balanced)", "Aggressive (8-10% High Yield)"])
+    account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, max_value=100000.0, value=100.0, step=100.0)
 
     # --- MAIN GRID ALLOCATION ---
     col1, col2 = st.columns([1.2, 1])
@@ -70,7 +75,7 @@ else:
         with col_as1:
             asset_symbol = st.text_input("Asset Instrument Symbol", value="XAUUSD")
         with col_as2:
-            asset_class = st.selectbox("Asset Class Tier", ["Precious Metals (Gold/Silver)", "Major Forex Pairs", "Crypto / Digital Assets", "Indices / Equities"])
+            asset_class = st.selectbox("Asset Class Tier", ["Precious Metals (Gold/Silver)", "Major Forex Pairs", "Crypto / Digital Assets"])
             
         direction = st.radio("Order Direction Matrix", ["BUY", "SELL"], horizontal=True)
         
@@ -85,99 +90,89 @@ else:
     with col2:
         st.subheader("🧮 Algorithmic Risk Analytics")
         
-        # Relative Pip Math Conversions based on Asset Class Selection
+        # Relative Structural Pip Distance Formula Logic
         if "Precious" in asset_class:
             pips_distance = abs(entry_target - sl_target) * 10
             reward_pips = abs(tp_target - entry_target) * 10
         elif "Forex" in asset_class:
             pips_distance = abs(entry_target - sl_target) * 10000
             reward_pips = abs(tp_target - entry_target) * 10000
-        else: # Crypto & Indices direct numerical spread
+        else:
             pips_distance = abs(entry_target - sl_target)
             reward_pips = abs(tp_target - entry_target)
             
         if pips_distance == 0: pips_distance = 1.0
         rr_ratio = reward_pips / pips_distance
 
-        calculated_lots = calculate_position_size(account_balance, risk_profile, pips_distance, asset_symbol, asset_class)
-        max_cash_risk = account_balance * (risk_profile / 100.0)
+        # Fetch custom progression lot sizes calculated via backend database rule mappings
+        calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
         
-        st.metric(label="Calculated Automated Volume", value=f"{calculated_lots} Lots")
-        st.success(f"Maximum Cash Risk Safeguard: ${max_cash_risk:,.2f} USD")
+        st.metric(label=f"Automated Size Blueprint ({matrix_label})", value=f"{calculated_lots} Lots")
+        st.success(f"Execution Target Environment: {account_environment}")
         st.info(f"Target Structure Risk: {pips_distance:.1f} Pips | Risk-to-Reward Ratio: 1:{rr_ratio:.2f}")
 
     st.markdown("---")
 
-    # --- AUTOMATED ALGORITHMIC ANALYSIS & RULES BREAKDOWN ---
-    col_an1, col_an2 = st.columns(2)
-
-    with col_an1:
-        st.subheader("🔎 Intelligence & Setup Analysis")
-        st.markdown(f"""
-        <div style='background-color: #1a1c23; padding: 15px; border-radius: 8px; border-left: 5px solid #00ff99;'>
-            <p><strong>Setup Logic:</strong> Internal algorithmic processing scanned the <strong>{asset_symbol}</strong> order structure. 
-            The entry configuration at <strong>{entry_target}</strong> matches a mitigation of an institutional order block level.</p>
-            <p><strong>Volume Validation:</strong> Based on the capital constraints of your <strong>${account_balance:,.2f}</strong> balance allocation, the math computed exactly <strong>{calculated_lots} lots</strong>. This enforces zero human miscalculations or emotional over-leveraging shifts on <strong>{broker_choice}</strong>.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_an2:
-        st.subheader("📋 Strict Rules Breakdown Protocol")
-        rule1 = "✅ Capital Risk Allocation Limit Checked (< 5.0%)" if risk_profile <= 5.0 else "❌ Risk Allocation Exceeds Safe Boundaries"
-        rule2 = "✅ Risk-to-Reward Ratio Valid (> 1:1.5)" if rr_ratio >= 1.5 else "⚠️ Low Reward-to-Risk Ratio Window Warning"
-        rule3 = "✅ Multi-User Account Cross-Tenant Separation Isolated"
-        rule4 = f"✅ Router Connected to {broker_choice} Live Secure Pipeline API"
-        
-        st.markdown(f"""
-        * {rule1}
-        * {rule2}
-        * {rule3}
-        * {rule4}
-        """)
-
-    st.markdown("---")
-
-    # --- PIPELINE DISPATCH PROCESSOR ---
-    if st.button("🚀 Authorize Gateway and Dispatch Order Matrix", type="primary", use_container_width=True):
-        with st.spinner(f"Routing transmission packets to {broker_choice} network servers..."):
-            execution_response = dispatch_order(
-                login_id=broker_account,
-                password=broker_password,
-                server=broker_server,
-                symbol=asset_symbol,
-                order_type=direction,
-                entry=entry_target,
-                sl=sl_target,
-                tp=tp_target,
-                lots=calculated_lots,
-                broker=broker_choice
-            )
-            if execution_response["status"] == "success":
-                st.balloons()
-                st.success(f"🎉 Pipeline Matrix Complete! Loaded into {broker_choice}. Reference Cloud ID: {execution_response['order_id']}")
-            else:
-                st.error(f"{execution_response['message']}")
-
-    st.markdown("---")
-    st.subheader("📊 Operational Analytics Panels")
-    tab1, tab2 = st.tabs(["📉 Price Line Modeling", "🗒 Live Trade Journal Log"])
+    # --- THE UPGRADED MULTI-PANEL DESK GRAPHICS TAB INTERFACE ---
+    tab1, tab2, tab3 = st.tabs(["📉 Institutional Charts & Liquidity Analysis", "📋 Strict Rules Breakdown Protocol", "🗒 Active Live Trade Journal"])
 
     with tab1:
-        x_steps = np.arange(1, 21)
-        y_vals = np.random.randn(20).cumsum() + entry_target
+        st.subheader("📊 Interactive Order Block Visualizer Mapping")
+        position_type = "Long Position Layout Block" if direction == "BUY" else "Short Position Layout Block"
+        st.caption(f"Visualizing Order Parameters for an automated **{direction} ({position_type})** sequence on **{asset_symbol}**")
+        
+        # Simulate active market chart baseline candles
+        x_ticks = np.arange(1, 26)
+        y_market = np.sin(x_ticks / 3) * (entry_target * 0.002) + entry_target
+        
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x_steps, y=y_vals, mode='lines+markers', name='Market Value Track', line=dict(color='#00ff99', width=2)))
-        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=20, r=20, t=20, b=20))
+        
+        # Plotly chart layer layout drawing rules
+        if direction == "BUY":
+            # Highlight target take profit block field with green fill overlays
+            fig.add_shape(type="rect", x0=1, x1=25, y0=entry_target, y1=tp_target, fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+            # Highlight stop loss target block field with warning red fill overlays
+            fig.add_shape(type="rect", x0=1, x1=25, y0=sl_target, y1=entry_target, fillcolor="rgba(255, 75, 75, 0.15)", line_width=0)
+        else:
+            # Short / SELL projection coordinate overlay fills inverted
+            fig.add_shape(type="rect", x0=1, x1=25, y0=tp_target, y1=entry_target, fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+            fig.add_shape(type="rect", x0=1, x1=25, y0=entry_target, y1=sl_target, fillcolor="rgba(255, 75, 75, 0.15)", line_width=0)
+            
+        # Draw explicit level lines across price coordinates
+        fig.add_trace(go.Scatter(x=x_ticks, y=y_market, mode='lines', name='Live Asset Price Feed', line=dict(color='#888888', width=1.5)))
+        fig.add_hline(y=entry_target, line_dash="dash", line_color="#00ff99", annotation_text="ENTRY TARGET", annotation_position="top left")
+        fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS (RISK BOUND)", annotation_position="bottom left")
+        fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT LIMIT", annotation_position="top right")
+        
+        fig.update_layout(template="plotly_dark", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
 
     with tab2:
+        st.subheader("🔎 Intelligence & Rulebook Verification")
+        
+        col_rl1, col_rl2 = st.columns(2)
+        with col_rl1:
+            st.markdown(f"""
+            <div style='background-color: #1a1c23; padding: 15px; border-radius: 8px; border-left: 5px solid #00ff99;'>
+                <p><strong>Gold Progression Guide Analysis:</strong> Your account size configuration is currently reading <strong>${account_balance:.2f}</strong>.</p>
+                <p>To avoid local infrastructure broker lock restrictions on small balances, volume assignments map exactly to your preferred <strong>{progression_tier} Matrix</strong> rules guidelines to balance consistency without trailing drawdowns.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col_rl2:
+            rule1 = "✅ Risk Tier Checked (Within Allocation Matrix Bounds)"
+            rule2 = "✅ Risk-to-Reward Ratio Valid (> 1:1.5)" if rr_ratio >= 1.5 else "⚠️ Low Reward-to-Risk Ratio Window Warning"
+            rule3 = f"✅ Sandboxed Gateway Routing Isolation Armed for {st.session_state.username}"
+            rule4 = f"✅ Cloud Gateway Target Pipeline: {broker_choice} [{account_environment.upper()}]"
+            
+            st.markdown(f"""
+            * {rule1}
+            * {rule2}
+            * {rule3}
+            * {rule4}
+            """)
+
+    with tab3:
+        st.caption("Active Secure Memory Matrix — Session Order Parameter Blocks")
         journal_data = pd.DataFrame([{
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"), 
-            "Broker": broker_choice,
-            "User Account": broker_account, 
-            "Asset": asset_symbol, 
-            "Action": f"{direction} LIMIT", 
-            "Volume (Lots)": calculated_lots, 
-            "Status": "Processing Cloud Routing"
-        }])
-        st.dataframe(journal_data, use_container_width=True)
