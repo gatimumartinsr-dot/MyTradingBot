@@ -44,9 +44,9 @@ def calculate_position_size(balance, risk_tier, stop_loss_pips, symbol, asset_cl
 
 def dispatch_order(login_id, password, server, symbol, order_type, entry, sl, tp, lots, broker):
     """
-    Live MetaApi Cloud execution layer.
-    Bypasses laptop requirements completely by piping web requests to your MetaApi server ID.
-    """
+    METAAPI_TOKEN = "YOUR_COPIED_TOKEN_STRING_FROM_API_ACCESS"
+METAAPI_ACCOUNT_ID = "9403d3db-0516-4b9a-99ad-9ba45c7cde5c"
+
     # -------------------------------------------------------------------------
     # 🔑 CONFIGURATION TOKENS: Drop your secure strings here once step 4 completes!
     # -------------------------------------------------------------------------
