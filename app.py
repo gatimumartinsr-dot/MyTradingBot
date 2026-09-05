@@ -34,7 +34,6 @@ if not st.session_state.logged_in:
         st.markdown("<br>", unsafe_allow_html=True)
 
         if gate_mode == "Sign In to Workspace":
-            st.subheader("Secure Terminal Gate")
             user_input = st.text_input("Workspace Username Key").strip().lower()
             pass_input = st.text_input("Access Password", type="password").strip()
             
@@ -81,12 +80,10 @@ else:
     broker_password = st.sidebar.text_input("Broker Trading Password", type="password", value="Pu,24ppy")
     broker_server = st.sidebar.text_input("Broker Server String Name", value="Exness-MT5-Trial15" if "Demo" in account_environment else "Exness-MT5-Real1")
 
-    # 🔘 NEW HARD HANDSHAKE AUTHENTICATE BUTTON LINK
     if st.sidebar.button("🔌 CONNECT TO METATRADER TERMINAL", type="primary", use_container_width=True):
-        with st.spinner("Piping secure handshake payload to server..."):
-            st.session_state.connection_active = True
-            st.toast("Handshake metrics verified. Account sync successful!")
-            st.rerun()
+        st.session_state.connection_active = True
+        st.toast("Handshake metrics verified. Account sync successful!")
+        st.rerun()
 
     st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Risk Parameter Protocol")
@@ -128,9 +125,12 @@ else:
 
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
             
-            st.markdown(f"<div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433; border-left: 5px solid #00ff99;'><p style='margin:0; font-size: 13px; color: #8892b0;'>AUTOMATED LOT ALLOCATION</p><p style='margin:2px 0 10px 0; font-size: 26px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p><p style='margin:4px 0 0 0; font-size: 13px;'><strong>Stop Distance:</strong> {pips_distance:.1f} Pips</p><p style='margin:4px 0 0 0; font-size: 13px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.2f} R</p><p style='margin:10px 0 0 0; font-size: 11px; color: #8892b0; border-top: 1px solid #1f2433; padding-top: 8px;'>Engine Validation: {matrix_label}</p></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433; border-left: 5px solid #00ff99;'><p style='margin:0; font-size: 13px; color: #8892b0;'>AUTOMATED LOT ALLOCATION</p><p style='margin:2px 0 10px 0; font-size: 26px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p><p style='margin:4px 0 0 0; font-size: 13px;'><strong>Stop Distance:</strong> {pips_distance:.1f} Pips</p><p style='margin:4px 0 0 0; font-size: 13px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.2f} R</p><p style='margin:10px 0 0 0; font-size: 11px; color: #8892b0; border-top: 1px solid #1f2433; padding-top: 8px;'>Engine Logic: {matrix_label}</p></div>", unsafe_allow_html=True)
 
         st.markdown("---")
         st.subheader(f"📈 Candlestick Level Visualizer Mapping — {asset_symbol}")
         x_ticks = np.arange(1, 31)
-s
+        y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
+        
+        is_buy = "BUY" in direction
+        shade_color_top = "rgba(0, 255, 153, 0.08)" if is_buy else "rgba(255, 75, 75, 0.08)"
