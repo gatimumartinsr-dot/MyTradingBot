@@ -9,7 +9,7 @@ from bot import calculate_position_size, dispatch_order
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
-st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
 # Initialize secure session states for login and working orders database persistence
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
@@ -88,7 +88,9 @@ else:
 
     # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
-    broker_choice = st.sidebar.selectbox("Select Target Broker", ["Exness Global", "IC Markets", "Pepperstone", "Generic MT5 Server Gateway"])
+    
+    # 🌐 DYNAMIC BROKER SELECTION MODIFIED TO ALLOW ANY USER DEFINED SERVER
+    broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
     
     broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
@@ -118,7 +120,12 @@ else:
         with col1:
             st.subheader("⚡ Order Ticket Parameters")
             asset_symbol = st.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
-            direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+            
+            col_ac1, col_ac2 = st.columns(2)
+            with col_ac1:
+                direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+            with col_ac2:
+                asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
             
             col_in1, col_in2, col_in3 = st.columns(3)
             entry_target = col_in1.number_input("Order Entry Target Price", value=2500.00, step=0.50)
@@ -127,7 +134,7 @@ else:
 
         with col2:
             st.subheader("🧮 Sizing Analytics Verification")
-            if "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper():
+            if "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper() or "Precious" in asset_class:
                 pips_distance = abs(entry_target - sl_target) * 10
                 reward_pips = abs(tp_target - entry_target) * 10
             else:
@@ -137,20 +144,10 @@ else:
             if pips_distance == 0: pips_distance = 1.0
             rr_ratio = reward_pips / pips_distance
 
-            calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals")
+            # SYNCHRONIZED CALIBRATION MATCH: Passing exactly 5 arguments to align with bot.py
+            calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
             
-            st.info(f"Lot Size Target Blueprint: {calculated_lots} Lots")
-            st.success(f"Risk Matrix Floor: 1:{rr_ratio:.1f} RR | Width: {pips_distance:.1f} Pips")
-
-        st.markdown("---")
-        st.subheader(f"📈 Candlestick Level Visualizer Mapping — {asset_symbol}")
-        x_ticks = np.arange(1, 31)
-        y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
-        
-        # 🟢 FLAT ERROR-PROOF PLOTLY LAYER
-        # Reconfigured math to evaluate colors directly in a list to completely bypass nested logic blocks
-        is_buy = "BUY" in direction
-        shade_color_top = "rgba(0, 255, 153, 0.08)" if is_buy else "rgba(255, 75, 75, 0.08)"
-        shade_color_bottom = "rgba(255, 75, 75, 0.08)" if is_buy else "rgba(0, 255, 153, 0.08)"
-        
-        fig = go.Figure()
+            st.markdown(f"""
+            <div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433;'>
+                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT blueprintVOLUME</p>
+                <p style='margin:2px 0 10px 0; font-size: 26px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
