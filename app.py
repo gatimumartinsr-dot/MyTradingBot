@@ -131,17 +131,15 @@ else:
         if pips_distance == 0: pips_distance = 1.0
         rr_ratio = reward_pips / pips_distance
 
-        # FIXED ARGS FLOW MATRIX: Passing variables correctly into backend calculations
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
         
-        st.metric(label=f"Automated Size Blueprint", value=f"{calculated_lots} Lots")
+        st.metric(label="Automated Size Blueprint", value=f"{calculated_lots} Lots")
         st.success(f"Strategy Matrix: {matrix_label}")
         st.info(f"Target Structure Risk: {pips_distance:.1f} Pips | Risk-to-Reward Ratio: 1:{rr_ratio:.2f}")
 
     st.markdown("---")
 
     # --- DYNAMIC INTERACTIVE MULTI-TAB WORKSPACE ---
-    # CONDITIONAL WORKSPACE NAVIGATION BAR: Reveals administrative metrics dashboard tab ONLY if you log in as master 'martins'
     if st.session_state.username == "martins":
         tab1, tab2, tab3, tab4 = st.tabs(["📉 Institutional Charts", "📋 Strategy Rulebook Protocols", "🗒 Active Live Trade Journal", "🔒 EXECUTIVE USER ACCESS REGISTRY PANEL"])
     else:
@@ -172,4 +170,5 @@ else:
         st.subheader("🔎 Intelligence & Rulebook Verification")
         col_rl1, col_rl2 = st.columns(2)
         with col_rl1:
-            st.markdown(f"""
+            st.info(f"Gold Progression Guide: Target Account size configuration balance reads ${account_balance:.2f}. Volume assignments accurately follow your preferred {progression_tier} rules book to minimize manual lot-sizing volatility risk parameters completely.")
+
