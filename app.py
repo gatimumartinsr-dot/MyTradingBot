@@ -80,7 +80,6 @@ else:
     
     if st.button("🔒 Sever Connection", type="secondary"):
         st.session_state.logged_in = False
-        st.username = ""
         st.rerun()
         
     st.title("🟢 Helix OB — Institutional Matrix Workspace")
