@@ -29,7 +29,6 @@ if "user_database" not in st.session_state:
 
 # --- APPLICATION ROUTING LOGIC ---
 if not st.session_state.logged_in:
-    # 🔐 AUTHENTICATION & SIGN-UP PORTAL (LANDING SCREEN)
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 50px;'>🟢 HELIX OB</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
     st.markdown("---")
@@ -74,7 +73,6 @@ if not st.session_state.logged_in:
                     st.success("Account created successfully! Switch to 'Sign In to Workspace' above to login.")
                     st.balloons()
 else:
-    # 📈 FULL OPERATIONAL TRADING DESK
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
     st.markdown(f"<div style='float: right; color: #8892b0;'>Broker Pipeline Status: <span style='color: #00ff99;'>● MT5 Bridge Live</span> | Operator: {operator_real_name.upper()}</div>", unsafe_allow_html=True)
     
@@ -137,19 +135,17 @@ else:
             if pips_distance == 0: pips_distance = 1.0
             rr_ratio = reward_pips / pips_distance
 
+            # ACCURATE 4-ARGUMENT FLOW COUPLING MATCH
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol)
             
-            st.info(f"Lot Size Target Blueprint: {calculated_lots} Lots")
-            st.success(f"Risk Matrix Floor: 1:{rr_ratio:.1f} RR | Width: {pips_distance:.1f} Pips")
+            st.markdown(f"""
+            <div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433;'>
+                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT VOLUME</p>
+                <p style='margin:2px 0 10px 0; font-size: 26px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
+                <p style='margin:4px 0 0 0; font-size: 13px;'><strong>Stop Loss Distance width:</strong> {pips_distance:.1f} Pips</p>
+                <p style='margin:4px 0 0 0; font-size: 13px;'><strong>Risk-to-Reward Ratio Floor:</strong> 1:{rr_ratio:.1f} R</p>
+                <p style='margin:10px 0 0 0; font-size: 11px; color: #8892b0; border-top: 1px solid #1f2433; padding-top: 8px;'>Engine Logic: {matrix_label}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("---")
-        st.subheader(f"📈 Candlestick Level Visualizer Mapping — {asset_symbol}")
-        x_ticks = np.arange(1, 31)
-        y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
-        
-        fig = go.Figure()
-        if "BUY" in direction:
-            fig.add_shape(type="rect", x0=1, x1=30, y0=entry_target, y1=tp_target, fillcolor="rgba(0, 255, 153, 0.08)", line_width=0)
-            fig.add_shape(type="rect", x0=1, x1=30, y0=sl_target, y1=entry_target, fillcolor="rgba(255, 75, 75, 0.08)", line_width=0)
-        else:
-            fig.add_shape(type="rect", x0=1, x1=30, y0=tp_target, y1=entry_target, fillcolor="rgba(0, 255, 153, 0.08)", line_width=0)
