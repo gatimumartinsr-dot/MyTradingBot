@@ -14,38 +14,66 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# 👥 THE USER CREDENTIALS REGISTRY DATABASE
-# You can add, change, or remove usernames and passwords here easily!
-USER_REGISTRY = {
-    "martins": "helix2026",      # Your account profile
-    "friend1": "trader99",       # Your first friend's account profile
-    "guestuser": "exnesslive"     # Another custom user profile
-}
+# 👥 INITIALIZE EXECUTOR SYSTEM REGISTER DATABASE
+# This stores accounts created on the fly during this runtime session
+if "user_database" not in st.session_state:
+    st.session_state.user_database = {
+        "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com"}
+    }
 
 # --- APPLICATION ROUTING LOGIC ---
 if not st.session_state.logged_in:
-    # 🔐 AUTHENTICATION PORTAL (LANDING SCREEN)
+    # 🔐 AUTHENTICATION & SIGN-UP PORTAL (LANDING SCREEN)
     st.markdown("<h1 style='text-align: center; color: #00ff99;'>🟢 HELIX OB</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
     st.markdown("---")
     
-    auth_col1, auth_col2, auth_col3 = st.columns([1, 1.2, 1])
+    auth_col1, auth_col2, auth_col3 = st.columns([1, 1.4, 1])
     with auth_col2:
-        st.subheader("Secure Terminal Gate")
-        user_input = st.text_input("Workspace Username Key").strip()
-        pass_input = st.text_input("Access Password", type="password").strip()
-        
-        if st.button("Authorize Connection Session", type="primary", use_container_width=True):
-            # Verify credentials against the database map registry
-            if user_input in USER_REGISTRY and USER_REGISTRY[user_input] == pass_input:
-                st.session_state.logged_in = True
-                st.session_state.username = user_input
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password. Session Authorization Denied.")
+        # Toggle switch between Sign In and Registration
+        gate_mode = st.radio("Choose Terminal Action", ["Sign In to Workspace", "Register New Trader Account"], horizontal=True)
+        st.markdown("---")
+
+        if gate_mode == "Sign In to Workspace":
+            st.subheader("Secure Terminal Gate")
+            user_input = st.text_input("Workspace Username Key").strip().lower()
+            pass_input = st.text_input("Access Password", type="password").strip()
+            
+            if st.button("Authorize Connection Session", type="primary", use_container_width=True):
+                # Validate against the dynamic dynamic session register
+                if user_input in st.session_state.user_database and st.session_state.user_database[user_input]["password"] == pass_input:
+                    st.session_state.logged_in = True
+                    st.session_state.username = user_input
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password. Session Authorization Denied.")
+                    
+        else:
+            st.subheader("📝 Trader Registration Form")
+            reg_name = st.text_input("Your Full Name")
+            reg_email = st.text_input("Your Email Address")
+            reg_user = st.text_input("Choose Unique Username").strip().lower()
+            reg_pass = st.text_input("Create Access Password", type="password").strip()
+            
+            if st.button("Generate Workspace Credentials", type="primary", use_container_width=True):
+                if not reg_name or not reg_email or not reg_user or not reg_pass:
+                    st.warning("Please fill out all identification fields to register.")
+                elif reg_user in st.session_state.user_database:
+                    st.error("This username is already taken. Please choose another one.")
+                else:
+                    # Save user metrics directly into background registration database maps
+                    st.session_state.user_database[reg_user] = {
+                        "password": reg_pass,
+                        "name": reg_name,
+                        "email": reg_email
+                    }
+                    st.success(f"🎉 Account created successfully for {reg_name}! You can now switch to 'Sign In to Workspace' above and log in.")
+                    st.balloons()
 else:
     # 📈 FULL PROFESSIONAL OPERATIONAL TRADING DESK
-    st.markdown(f"<h4 style='float: right; color: #888; margin-top:0px;'>Active Operator: <span style='color: #00ff99;'>{st.session_state.username}</span></h4>", unsafe_allow_html=True)
+    operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
+    st.markdown(f"<h4 style='float: right; color: #888; margin-top:0px;'>Active Operator: <span style='color: #00ff99;'>{operator_real_name.upper()} ({st.session_state.username.upper()})</span></h4>", unsafe_allow_html=True)
+    
     if st.button("🔒 Logout / Sever Connection", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.username = ""
@@ -147,37 +175,3 @@ else:
         fig.add_hline(y=sl_target, line_dash="dash", line_color="#ff4b4b", annotation_text="STOP LOSS")
         fig.add_hline(y=tp_target, line_dash="dash", line_color="#1f77b4", annotation_text="TAKE PROFIT")
         
-        fig.update_layout(template="plotly_dark", height=400, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig, use_container_width=True)
-
-    with tab2:
-        st.subheader("🔎 Intelligence & Rulebook Verification")
-        col_rl1, col_rl2 = st.columns(2)
-        with col_rl1:
-            st.markdown(f"""
-            <div style='background-color: #1a1c23; padding: 15px; border-radius: 8px; border-left: 5px solid #00ff99;'>
-                <p><strong>Gold Progression Guide Analysis:</strong> Your account size configuration is currently reading <strong>${account_balance:.2f}</strong>.</p>
-                <p>To avoid local infrastructure broker lock restrictions on small balances, volume assignments map exactly to your preferred <strong>{progression_tier} Matrix</strong> rules guidelines.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with col_rl2:
-            st.markdown(f"""
-            * ✅ Risk Tier Checked (Within Allocation Matrix Bounds)
-            * ✅ Risk-to-Reward Ratio Valid (> 1:1.5)
-            * ✅ Sandboxed Gateway Routing Isolation Armed for {st.session_state.username}
-            * ✅ Cloud Gateway Target Pipeline: {broker_choice} [{account_environment.upper()}]
-            """)
-
-    with tab3:
-        st.caption("Active Secure Memory Matrix — Session Order Parameter Blocks")
-        row_dict = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "Operator": str(st.session_state.username),
-            "Broker": str(broker_choice),
-            "Env": "DEMO" if "Demo" in account_environment else "LIVE",
-            "Account": str(broker_account),
-            "Asset": str(asset_symbol),
-            "Action": f"{direction} LIMIT",
-            "Volume": float(calculated_lots)
-        }
