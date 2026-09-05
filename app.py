@@ -14,6 +14,14 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
+# 👥 THE USER CREDENTIALS REGISTRY DATABASE
+# You can add, change, or remove usernames and passwords here easily!
+USER_REGISTRY = {
+    "martins": "helix2026",      # Your account profile
+    "friend1": "trader99",       # Your first friend's account profile
+    "guestuser": "exnesslive"     # Another custom user profile
+}
+
 # --- APPLICATION ROUTING LOGIC ---
 if not st.session_state.logged_in:
     # 🔐 AUTHENTICATION PORTAL (LANDING SCREEN)
@@ -24,26 +32,27 @@ if not st.session_state.logged_in:
     auth_col1, auth_col2, auth_col3 = st.columns([1, 1.2, 1])
     with auth_col2:
         st.subheader("Secure Terminal Gate")
-        user_input = st.text_input("Workspace Username Key")
-        pass_input = st.text_input("Access Password", type="password")
+        user_input = st.text_input("Workspace Username Key").strip()
+        pass_input = st.text_input("Access Password", type="password").strip()
         
         if st.button("Authorize Connection Session", type="primary", use_container_width=True):
-            if user_input and pass_input == "helix2026":
+            # Verify credentials against the database map registry
+            if user_input in USER_REGISTRY and USER_REGISTRY[user_input] == pass_input:
                 st.session_state.logged_in = True
                 st.session_state.username = user_input
                 st.rerun()
             else:
-                st.error("Invalid Credentials. Session Authorization Denied.")
+                st.error("Invalid Username or Password. Session Authorization Denied.")
 else:
     # 📈 FULL PROFESSIONAL OPERATIONAL TRADING DESK
-    st.markdown(f"<h4 style='float: right; color: #888; margin-top:0px;'>User Session: <span style='color: #00ff99;'>{st.session_state.username}</span></h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='float: right; color: #888; margin-top:0px;'>Active Operator: <span style='color: #00ff99;'>{st.session_state.username}</span></h4>", unsafe_allow_html=True)
     if st.button("🔒 Logout / Sever Connection", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
         
     st.title("🟢 Helix OB — Institutional Matrix Workspace")
-    st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
+    st.caption(f"Sandboxed Trading Environment Assigned to User Token: {st.session_state.username}")
     st.markdown("---")
 
     # --- SIDEBAR CONFIGURATION LAYER ---
@@ -164,6 +173,7 @@ else:
         st.caption("Active Secure Memory Matrix — Session Order Parameter Blocks")
         row_dict = {
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "Operator": str(st.session_state.username),
             "Broker": str(broker_choice),
             "Env": "DEMO" if "Demo" in account_environment else "LIVE",
             "Account": str(broker_account),
@@ -171,11 +181,3 @@ else:
             "Action": f"{direction} LIMIT",
             "Volume": float(calculated_lots)
         }
-        st.dataframe(pd.DataFrame([row_dict]), use_container_width=True)
-
-    st.markdown("---")
-    
-    # --- PIPELINE DISPATCH PROCESSOR ---
-    if st.button("🚀 Authorize Gateway and Dispatch Order Matrix", type="primary", use_container_width=True):
-        with st.spinner("Routing transmission packets to networks..."):
-            execution_response = dispatch_order(broker_account, broker_password, broker_server, asset_symbol, direction, entry_target, sl_target, tp_target, calculated_lots, broker_choice)
