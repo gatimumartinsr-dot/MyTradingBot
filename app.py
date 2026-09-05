@@ -6,7 +6,7 @@ from datetime import datetime
 from bot import calculate_position_size, dispatch_order
 
 # Configuration setup for an elite institutional desk execution view
-st.set_page_config(page_title="Helix OB Workspace", layout="wide", page_icon="🟢")
+st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
 st.markdown("""
@@ -177,9 +177,9 @@ else:
             if pips_distance == 0: pips_distance = 1.0
             rr_ratio = reward_pips / pips_distance
 
-            # FIX ARGS CALIBRATION RULE: Variables sent matched correctly to bot.py rules signature
+            # FIX ARGS CALIBRATION RULE
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol)
             
             st.markdown(f"""
             <div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433;'>
-                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT blueprintVOLUME</p>
+                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT VOLUME</p>
