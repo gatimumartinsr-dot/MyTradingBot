@@ -9,43 +9,7 @@ from bot import calculate_position_size, dispatch_order
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
-st.markdown("""
-<style>
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #0b0e14 !important;
-        color: #e1e4ea !important;
-    }
-    div[data-testid="metric-container"] {
-        background-color: #121620 !important;
-        border: 1px solid #1f2433 !important;
-        padding: 20px !important;
-        border-radius: 10px !important;
-        border-left: 5px solid #00ff99 !important;
-    }
-    div.stAlert {
-        background-color: #121620 !important;
-        border: 1px solid #1f2433 !important;
-    }
-    .stButton>button {
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #121620 !important;
-        border: 1px solid #1f2433 !important;
-        border-radius: 6px 6px 0px 0px !important;
-        padding: 10px 20px !important;
-        color: #8892b0 !important;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #00ff99 !important;
-        border-bottom: 2px solid #00ff99 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
 # Initialize secure session states for login and working orders database persistence
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
@@ -57,7 +21,7 @@ if "active_orders" not in st.session_state:
         {"Ticket": "#2288103907", "Asset": "EURUSDm", "Type": "Sell Limit", "Entry": 1.08650, "Stop": 1.08790, "Target": 1.08370, "State": "Breakeven"}
     ]
 
-# 👥 INITIALIZE EXECUTOR SYSTEM REGISTER DATABASE (Persistent during runtime)
+# Initialize user database registry
 if "user_database" not in st.session_state:
     st.session_state.user_database = {
         "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com", "joined": "2026-09-05 12:00"}
@@ -107,12 +71,12 @@ if not st.session_state.logged_in:
                         "email": reg_email,
                         "joined": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
-                    st.success(f"🎉 Account created successfully for {reg_name}! You can now switch to 'Sign In to Workspace' above and log in.")
+                    st.success("Account created successfully! Switch to 'Sign In to Workspace' above to login.")
                     st.balloons()
 else:
-    # 📈 FULL PROFESSIONAL OPERATIONAL TRADING DESK
+    # 📈 FULL OPERATIONAL TRADING DESK
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
-    st.markdown(f"<div style='float: right; color: #8892b0;'>Broker Pipeline Status: <span style='color: #00ff99;'>● MT5 Bridge Live</span> | Operator: {operator_real_name.upper()} ({st.session_state.username.upper()})</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='float: right; color: #8892b0;'>Broker Pipeline Status: <span style='color: #00ff99;'>● MT5 Bridge Live</span> | Operator: {operator_real_name.upper()}</div>", unsafe_allow_html=True)
     
     if st.button("🔒 Sever Connection", type="secondary"):
         st.session_state.logged_in = False
@@ -141,16 +105,14 @@ else:
     tab_desk, tab_journal, tab_automation = st.tabs(["🖥️ Execution Desk", "🗒️ Performance Journal", "🤖 Automation Protocols"])
 
     with tab_desk:
-        # 📊 LIVE CAPITAL TRACKING METRIC BLOCKS Matrix
+        # Metrics Row
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         m_c1.metric("ACCOUNT AUDIT BALANCE", f"${account_balance:,.2f}")
         m_c2.metric("CURRENT MARGIN EQUITY", f"${account_balance + 12.60:,.2f}")
         m_c3.metric("OPEN RUNNING P/L STATUS", "+$12.60")
-        m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * 0.01:,.2f}", "1.0% Allocation Base")
+        m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * 0.01:,.2f}", "1.0% Base")
 
         st.markdown("---")
-
-        # --- MAIN CONFIGURATION PARAMETERS GRID ---
         col1, col2 = st.columns([1.2, 1])
 
         with col1:
@@ -165,8 +127,6 @@ else:
 
         with col2:
             st.subheader("🧮 Sizing Analytics Verification")
-            
-            # Pip metric calculation parser
             if "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper():
                 pips_distance = abs(entry_target - sl_target) * 10
                 reward_pips = abs(tp_target - entry_target) * 10
@@ -177,9 +137,19 @@ else:
             if pips_distance == 0: pips_distance = 1.0
             rr_ratio = reward_pips / pips_distance
 
-            # FIX ARGS CALIBRATION RULE
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol)
             
-            st.markdown(f"""
-            <div style='background-color: #121620; padding: 18px; border-radius: 8px; border: 1px solid #1f2433;'>
-                <p style='margin:0; font-size: 14px; color: #8892b0;'>AUTOMATED LOT VOLUME</p>
+            st.info(f"Lot Size Target Blueprint: {calculated_lots} Lots")
+            st.success(f"Risk Matrix Floor: 1:{rr_ratio:.1f} RR | Width: {pips_distance:.1f} Pips")
+
+        st.markdown("---")
+        st.subheader(f"📈 Candlestick Level Visualizer Mapping — {asset_symbol}")
+        x_ticks = np.arange(1, 31)
+        y_market = np.sin(x_ticks / 4) * (entry_target * 0.003) + entry_target
+        
+        fig = go.Figure()
+        if "BUY" in direction:
+            fig.add_shape(type="rect", x0=1, x1=30, y0=entry_target, y1=tp_target, fillcolor="rgba(0, 255, 153, 0.08)", line_width=0)
+            fig.add_shape(type="rect", x0=1, x1=30, y0=sl_target, y1=entry_target, fillcolor="rgba(255, 75, 75, 0.08)", line_width=0)
+        else:
+            fig.add_shape(type="rect", x0=1, x1=30, y0=tp_target, y1=entry_target, fillcolor="rgba(0, 255, 153, 0.08)", line_width=0)
