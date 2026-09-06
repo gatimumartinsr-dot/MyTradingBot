@@ -95,11 +95,7 @@ else:
 
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     session_mode = st.sidebar.selectbox("Enforce Session Timing Window", ["Disable Filter", "Power Hour (Institutional Volume)", "London Open Block", "NY Session Block"])
-    
-    # 📋 REMOVED GOLD TIER PROGRESSION: Swapped dropdown to direct risk percentages
     risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
-    
-    # Dynamic parameter reading your real Exness account balance input dynamically
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=10.0, max_value=100000.0, value=161.53, step=10.0)
 
     st.sidebar.markdown("---")
@@ -147,9 +143,14 @@ else:
         st.markdown("---")
         st.subheader("🧮 Sizing Analytics Verification")
         
-        # Pull distance parameter widths cleanly across forex or metals formats
         if "Precious" in asset_class or "XAU" in asset_symbol.upper():
             pips_distance = abs(entry_target - sl_target) * 10
         elif "Forex" in asset_class:
             pips_distance = abs(entry_target - sl_target) * 10000
         else:
+            pips_distance = abs(entry_target - sl_target)
+            
+        if pips_distance == 0: pips_distance = 1.0
+
+        calculated_lots, matrix_label = calculate_position_size(account_balance, risk_percentage, pips_distance, asset_symbol, asset_class)
+        
