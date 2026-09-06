@@ -115,37 +115,40 @@ else:
         m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * 0.01:,.2f}", "1.0% Base")
 
         st.markdown("---")
-        col1, col2 = st.columns([1.2, 1])
+        
+        # ⚡ TOP CONTAINER AllOCATION: Sizing Verification now takes center stage across full layout width
+        st.subheader("🧮 Sizing Analytics Verification")
+        
+        # Input parameters pre-isolation to process math definitions smoothly before fields are rendered
+        asset_symbol = "XAUUSDm"
+        entry_init = 2500.00
+        sl_init = 2490.00
+        tp_init = 2530.00
+        
+        pips_distance = abs(entry_init - sl_init) * 10
+        reward_pips = abs(tp_init - entry_init) * 10
+        if pips_distance == 0: pips_distance = 1.0
+        rr_ratio = reward_pips / pips_distance
 
-        with col1:
-            st.subheader("⚡ Order Ticket Parameters")
-            asset_symbol = st.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
-            
-            col_ac1, col_ac2 = st.columns(2)
-            with col_ac1:
-                direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-            with col_ac2:
-                asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
-            
-            col_in1, col_in2, col_in3 = st.columns(3)
-            entry_target = col_in1.number_input("Order Entry Target Price", value=2500.00, step=0.50)
-            sl_target = col_in2.number_input("Stop Loss Level (Wick Edge)", value=2490.00, step=0.50)
-            tp_target = col_in3.number_input("Take Profit Target Level", value=2530.00, step=0.50)
+        calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals (Gold/Silver)")
+        
+        # High contrast display block card spans full width safely
+        st.markdown(f"""
+        <div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'>
+            <p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p>
+            <p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
+            <div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'>
+                <p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p>
+                <p style='margin:0; font-size: 14px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p>
+                <p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("---")
 
-        with col2:
-            st.subheader("🧮 Sizing Analytics Verification")
-            
-            # Sanitized Pip calculation loops handling suffix modifications automatically
-            if "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper() or "Precious" in asset_class:
-                pips_distance = abs(entry_target - sl_target) * 10
-                reward_pips = abs(tp_target - entry_target) * 10
-            else:
-                pips_distance = abs(entry_target - sl_target) * 10000
-                reward_pips = abs(tp_target - entry_target) * 10000
-                
-            if pips_distance == 0: pips_distance = 1.0
-            rr_ratio = reward_pips / pips_distance
-
-            # Sizing Hook Coupling
-            calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
-            
+        # Configuration Parameter Fields Row
+        st.subheader("⚡ Order Ticket Parameters")
+        col_f1, col_f2, col_f3 = st.columns(3)
+        asset_symbol = col_f1.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
+        direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
