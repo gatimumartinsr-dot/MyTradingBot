@@ -8,7 +8,7 @@ from bot import calculate_position_size, dispatch_order
 # Configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# Premium Custom CSS Injection - Clean text strings that can never crash
+# Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
 # Initialize secure session states for login and connection loop persistence
@@ -24,7 +24,6 @@ if "user_database" not in st.session_state:
 
 # --- APPLICATION ROUTING PORTAL LAYER ---
 if not st.session_state.logged_in:
-    # 🔐 AUTHENTICATION & SIGN-UP PORTAL (LANDING SCREEN)
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 50px;'>🟢 HELIX OB</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
     st.markdown("---")
@@ -69,7 +68,7 @@ if not st.session_state.logged_in:
                     st.success("Account created successfully! Switch to 'Sign In' above to login.")
                     st.balloons()
 else:
-    # 📈 FULL METRIC AND GATEWAY LOG OVERVIEW
+    # 📈 FULL OPERATIONAL TRADING DESK
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
     status_color = "#00ff99" if st.session_state.connection_active else "#8892b0"
     status_label = "● MT5 BRIDGE LIVE" if st.session_state.connection_active else "● OFFLINE (AWAITING LINK)"
@@ -135,6 +134,8 @@ else:
 
         with col2:
             st.subheader("🧮 Sizing Analytics Verification")
+            
+            # Sanitized Pip calculation loops handling suffix modifications automatically
             if "XAU" in asset_symbol.upper() or "XAG" in asset_symbol.upper() or "Precious" in asset_class:
                 pips_distance = abs(entry_target - sl_target) * 10
                 reward_pips = abs(tp_target - entry_target) * 10
@@ -145,5 +146,7 @@ else:
             if pips_distance == 0: pips_distance = 1.0
             rr_ratio = reward_pips / pips_distance
 
+            # Sizing Hook Coupling
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
             
+
