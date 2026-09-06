@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from datetime import datetime
-from bot import calculate_position_size, dispatch_order
+from datetime import datetime, timedelta
+from bot import calculate_position_size, dispatch_order, execute_historical_backtest
 
 # Configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -104,7 +104,7 @@ else:
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, max_value=100000.0, value=500.0, step=100.0)
 
     # --- DESK TAB LAYOUT SEPARATION MANAGER ---
-    tab_desk, tab_journal, tab_automation = st.tabs(["🖥️ Execution Desk", "🗒️ Performance Journal", "🤖 Automation Protocols"])
+    tab_desk, tab_journal, tab_automation, tab_backtest = st.tabs(["🖥️ Execution Desk", "🗒️ Performance Journal", "📋 Rule Engine Audit", "🧪 Historical Backtest Matrix"])
 
     with tab_desk:
         # Metrics Row
@@ -116,10 +116,8 @@ else:
 
         st.markdown("---")
         
-        # ⚡ TOP CONTAINER AllOCATION: Sizing Verification now takes center stage across full layout width
+        # Sizing Verification Block
         st.subheader("🧮 Sizing Analytics Verification")
-        
-        # Input parameters pre-isolation to process math definitions smoothly before fields are rendered
         asset_symbol = "XAUUSDm"
         entry_init = 2500.00
         sl_init = 2490.00
@@ -132,7 +130,6 @@ else:
 
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals (Gold/Silver)")
         
-        # High contrast display block card spans full width safely
         st.markdown(f"""
         <div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'>
             <p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p>
@@ -152,3 +149,6 @@ else:
         col_f1, col_f2, col_f3 = st.columns(3)
         asset_symbol = col_f1.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
         direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+        asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
+        
+        col_in1, col_in2, col_in3 = st.columns(3)
