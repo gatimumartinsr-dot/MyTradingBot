@@ -15,6 +15,7 @@ st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 
 # Initialize secure local user database registry
 if "user_database" not in st.session_state:
@@ -56,20 +57,30 @@ if not st.session_state.logged_in:
 else:
     # 📈 FULL SYSTEM METRIC OPERATIONAL WORKSPACE
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
-    brain_status_color = "#00ff99" if st.session_state.brain_active else "#8892b0"
-    brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE" if st.session_state.brain_active else "● ENGINE LOCK IDLE"
+    
+    # Establish dynamic state string logic variables
+    if st.session_state.brain_active:
+        brain_status_color = "#00ff99"
+        brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE"
+    elif st.session_state.gateway_connected:
+        brain_status_color = "#00ffff"
+        brain_status_label = "● MT5 HANDSHAKE AUTHENTICATED"
+    else:
+        brain_status_color = "#8892b0"
+        brain_status_label = "● ENGINE LOCK IDLE (AWAITING LINK)"
     
     st.markdown(f"<div style='float: right; color: #8892b0;'>System State: <span style='color: {brain_status_color}; font-weight: bold;'>{brain_status_label}</span> | Operator: {operator_real_name.upper()}</div>", unsafe_allow_html=True)
     if st.button("🔒 Sever Connection", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.brain_active = False
+        st.session_state.gateway_connected = False
         st.rerun()
         
     st.title("🟢 Helix OB — Institutional Matrix Workspace")
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
-    # --- SIDEBAR CONFIGURATION LAYER ---
+    # --- SIDEBAR AUTHENTICATION CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -78,17 +89,27 @@ else:
     broker_server = st.sidebar.text_input("Broker Server String", value="Exness-MT5-Trial15" if "Demo" in account_environment else "Exness-MT5-Real1")
 
     st.sidebar.markdown("---")
+    
+    # 🔌 RESTORED SIDEBAR LOG-IN HANDSHAKE LINK BUTTON Matrix
+    if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER GATEWAY", type="primary", use_container_width=True):
+        st.session_state.gateway_connected = True
+        st.sidebar.success("Handshake active! Token synchronized to cloud node.")
+        st.rerun()
+
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     session_mode = st.sidebar.selectbox("Enforce Session Timing Window", ["Disable Filter", "Power Hour (Institutional Volume)", "London Open Block", "NY Session Block"])
     progression_tier = st.sidebar.selectbox("Gold Progression Tier Rulebook", ["Conservative (1-2% Matrix)", "Medium (3-5% Balanced)", "Aggressive (8-10% High Yield)"])
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, max_value=100000.0, value=500.0, step=100.0)
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🧠 Autonomous Controller")
+    st.sidebar.header("🧠 Autonomous Hands-Free Mode")
     if not st.session_state.brain_active:
-        if st.sidebar.button("⚡ ACTIVATE AUTONOMOUS ENGINE", type="primary", use_container_width=True):
-            st.session_state.brain_active = True
-            st.rerun()
+        if st.sidebar.button("⚡ ACTIVATE AUTONOMOUS BRAIN", type="primary", use_container_width=True):
+            if not st.session_state.gateway_connected:
+                st.sidebar.error("Aborted: Click Authorize Live Broker Gateway first!")
+            else:
+                st.session_state.brain_active = True
+                st.rerun()
     else:
         if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
             st.session_state.brain_active = False
@@ -97,7 +118,6 @@ else:
     # --- DESK TAB LAYOUT SEPARATION MANAGER ---
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
-    # Fetch live quotes metrics from backend calculations mapping script
     from bot import fetch_live_market_tick
     live_bid, live_ask = fetch_live_market_tick("XAUUSDm")
 
@@ -121,20 +141,11 @@ else:
         reward_pips = abs(tp_init - entry_init) * 10
         rr_ratio = reward_pips / pips_distance
 
-        # Fetch custom progression metrics from strategy sheet logic matrices
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals (Gold/Silver)")
         
-        st.markdown(f"""
-        <div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'>
-            <p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p>
-            <p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
-            <div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'>
-                <p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p>
-                <p style='margin:0; font-size: 14px; color: #e1e4ea;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p>
-                <p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Flattened markup block card to prevent text display cropping
+        st.metric(label=f"Automated Size Blueprint — Strategy Mode: {matrix_label}", value=f"{calculated_lots} Lots")
+        st.info(f"Target Structure Parameters -> Stop Loss Width: {pips_distance:.1f} Pips | Risk-to-Reward: 1:{rr_ratio:.1f} R")
         
         st.markdown("---")
         st.subheader("⚡ Order Ticket Parameters")
@@ -143,4 +154,3 @@ else:
         direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
         asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
         
-        col_in1, col_in2, col_in3 = st.columns(3)
