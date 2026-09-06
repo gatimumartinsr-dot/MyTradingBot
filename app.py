@@ -58,7 +58,6 @@ else:
     # 📈 FULL SYSTEM METRIC OPERATIONAL WORKSPACE
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
     
-    # Establish dynamic state string logic variables
     if st.session_state.brain_active:
         brain_status_color = "#00ff99"
         brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE"
@@ -80,7 +79,7 @@ else:
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
-    # --- SIDEBAR AUTHENTICATION CONFIGURATION LAYER ---
+    # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -89,8 +88,6 @@ else:
     broker_server = st.sidebar.text_input("Broker Server String", value="Exness-MT5-Trial15" if "Demo" in account_environment else "Exness-MT5-Real1")
 
     st.sidebar.markdown("---")
-    
-    # 🔌 RESTORED SIDEBAR LOG-IN HANDSHAKE LINK BUTTON Matrix
     if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER GATEWAY", type="primary", use_container_width=True):
         st.session_state.gateway_connected = True
         st.sidebar.success("Handshake active! Token synchronized to cloud node.")
@@ -98,8 +95,12 @@ else:
 
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     session_mode = st.sidebar.selectbox("Enforce Session Timing Window", ["Disable Filter", "Power Hour (Institutional Volume)", "London Open Block", "NY Session Block"])
-    progression_tier = st.sidebar.selectbox("Gold Progression Tier Rulebook", ["Conservative (1-2% Matrix)", "Medium (3-5% Balanced)", "Aggressive (8-10% High Yield)"])
-    account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=100.0, max_value=100000.0, value=500.0, step=100.0)
+    
+    # 📋 REMOVED GOLD TIER PROGRESSION: Swapped dropdown to direct risk percentages
+    risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
+    
+    # Dynamic parameter reading your real Exness account balance input dynamically
+    account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=10.0, max_value=100000.0, value=161.53, step=10.0)
 
     st.sidebar.markdown("---")
     st.sidebar.header("🧠 Autonomous Hands-Free Mode")
@@ -127,30 +128,28 @@ else:
         m_c1.metric("ACCOUNT AUDIT BALANCE", f"${account_balance:,.2f}")
         m_c2.metric("LIVE BID PRICE FEED", f"${live_bid:,.2f}")
         m_c3.metric("LIVE ASK PRICE FEED", f"${live_ask:,.2f}")
-        m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * 0.01:,.2f}", "1.0% Base Alloc")
+        m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * (risk_percentage / 100.0):,.2f}", f"{risk_percentage}% Alloc Base")
 
         st.markdown("---")
         
-        st.subheader("🧮 Sizing Analytics Verification")
-        asset_symbol = "XAUUSDm"
-        entry_init = live_bid
-        sl_init = live_bid - 10.00
-        tp_init = live_bid + 30.00
-        
-        pips_distance = abs(entry_init - sl_init) * 10
-        reward_pips = abs(tp_init - entry_init) * 10
-        rr_ratio = reward_pips / pips_distance
-
-        calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals (Gold/Silver)")
-        
-        # Flattened markup block card to prevent text display cropping
-        st.metric(label=f"Automated Size Blueprint — Strategy Mode: {matrix_label}", value=f"{calculated_lots} Lots")
-        st.info(f"Target Structure Parameters -> Stop Loss Width: {pips_distance:.1f} Pips | Risk-to-Reward: 1:{rr_ratio:.1f} R")
-        
-        st.markdown("---")
+        # --- ORDER PARAMETER CONTROL INPUTS ---
         st.subheader("⚡ Order Ticket Parameters")
         col_f1, col_f2, col_f3 = st.columns(3)
         asset_symbol = col_f1.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
         direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-        asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
+        asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs", "Crypto Cross Assets"])
         
+        col_in1, col_in2, col_in3 = st.columns(3)
+        entry_target = col_in1.number_input("Order Entry Target Price", value=live_bid, step=0.50)
+        sl_target = col_in2.number_input("Stop Loss Level (Wick Edge)", value=live_bid - 5.00, step=0.50)
+        tp_target = col_in3.number_input("Take Profit Target Level", value=live_bid + 15.00, step=0.50)
+
+        st.markdown("---")
+        st.subheader("🧮 Sizing Analytics Verification")
+        
+        # Pull distance parameter widths cleanly across forex or metals formats
+        if "Precious" in asset_class or "XAU" in asset_symbol.upper():
+            pips_distance = abs(entry_target - sl_target) * 10
+        elif "Forex" in asset_class:
+            pips_distance = abs(entry_target - sl_target) * 10000
+        else:
