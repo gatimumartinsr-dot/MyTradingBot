@@ -5,19 +5,24 @@ import plotly.graph_objects as go
 from datetime import datetime
 from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix
 
+# Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
+# Premium Custom CSS Injection for a flawless high-contrast dark dashboard aesthetic
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
 
+# Initialize secure session states for login and connection loop persistence
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
 
+# Initialize secure local user database registry
 if "user_database" not in st.session_state:
     st.session_state.user_database = {
         "martins": {"password": "helix2026", "name": "Martins", "email": "martins@helix.com", "joined": "2026-09-05 12:00"}
     }
 
+# --- APPLICATION ROUTING PORTAL LAYER ---
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 50px;'>🟢 HELIX OB</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
@@ -42,13 +47,14 @@ if not st.session_state.logged_in:
             reg_user = st.text_input("Choose Unique Username").strip().lower()
             reg_pass = st.text_input("Create Access Password", type="password").strip()
             if st.button("Generate Workspace Credentials", type="primary", use_container_width=True):
-                if not reg_name or not reg_email or not reg_user or not reg_pass: st.warning("Please fill out all identification fields to register.")
+                if not reg_name or not reg_email or not reg_user or not reg_pass: st.warning("Please fill out all fields.")
                 elif reg_user in st.session_state.user_database: st.error("This username is already taken.")
                 else:
                     st.session_state.user_database[reg_user] = {"password": reg_pass, "name": reg_name, "email": reg_email, "joined": datetime.now().strftime("%Y-%m-%d %H:%M")}
                     st.success("Account created successfully! Switch to 'Sign In' above to login.")
                     st.balloons()
 else:
+    # 📈 FULL SYSTEM METRIC OPERATIONAL WORKSPACE
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
     brain_status_color = "#00ff99" if st.session_state.brain_active else "#8892b0"
     brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE" if st.session_state.brain_active else "● ENGINE LOCK IDLE"
@@ -63,6 +69,7 @@ else:
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
+    # --- SIDEBAR AUTHENTICATION CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -87,12 +94,15 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
+    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
+    # Fetch live quotes metrics from backend calculations mapping script
     from bot import fetch_live_market_tick
     live_bid, live_ask = fetch_live_market_tick("XAUUSDm")
 
     with tab_desk:
+        # Live Stream Analytics Row Blocks
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         m_c1.metric("ACCOUNT AUDIT BALANCE", f"${account_balance:,.2f}")
         m_c2.metric("LIVE BID PRICE FEED", f"${live_bid:,.2f}")
@@ -111,9 +121,20 @@ else:
         reward_pips = abs(tp_init - entry_init) * 10
         rr_ratio = reward_pips / pips_distance
 
+        # Fetch custom progression metrics from strategy sheet logic matrices
         calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, "Precious Metals (Gold/Silver)")
         
-        st.markdown(f"<div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'><p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p><p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p><div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'><p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p><p style='margin:0; font-size: 14px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p><p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p></div></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'>
+            <p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p>
+            <p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
+            <div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'>
+                <p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p>
+                <p style='margin:0; font-size: 14px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p>
+                <p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         st.subheader("⚡ Order Ticket Parameters")
@@ -123,18 +144,3 @@ else:
         asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
         
         col_in1, col_in2, col_in3 = st.columns(3)
-        entry_target = col_in1.number_input("Order Entry Target Price", value=2500.00, step=0.50)
-        sl_target = col_in2.number_input("Stop Loss Level (Wick Edge)", value=2490.00, step=0.50)
-        tp_target = col_in3.number_input("Take Profit Target Level", value=2530.00, step=0.50)
-
-        st.markdown("---")
-        st.subheader(f"📈 Real-Time Price Stream Mapping — {asset_symbol}")
-        
-        x_ticks = np.arange(1, 31)
-        y_market = np.sin(x_ticks / 4) * 4.5 + live_bid
-        
-        is_buy = "BUY" in direction
-        shade_color_top = "rgba(0, 255, 153, 0.08)" if is_buy else "rgba(255, 75, 75, 0.08)"
-        shade_color_bottom = "rgba(255, 75, 75, 0.08)" if is_buy else "rgba(0, 255, 153, 0.08)"
-        
-        fig = go.Figure()
