@@ -149,4 +149,3 @@ else:
             # Sizing Hook Coupling
             calculated_lots, matrix_label = calculate_position_size(account_balance, progression_tier, pips_distance, asset_symbol, asset_class)
             
-
