@@ -69,7 +69,7 @@ else:
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
-    # --- SIDEBAR AUTHENTICATION CONFIGURATION LAYER ---
+    # --- SIDEBAR CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -130,7 +130,7 @@ else:
             <p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p>
             <div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'>
                 <p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p>
-                <p style='margin:0; font-size: 14px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p>
+                <p style='margin:0; font-size: 14px; color: #e1e4ea;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p>
                 <p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p>
             </div>
         </div>
