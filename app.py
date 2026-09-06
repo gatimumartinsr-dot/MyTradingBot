@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import random
+from datetime import datetime
 from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix
 
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -64,7 +63,6 @@ else:
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
-    # --- SIDEBAR AUTHENTICATION CONFIGURATION LAYER ---
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -89,11 +87,8 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
-    # 📊 INSTANT LIVE QUOTE DATA STREAM INJECTION
-    # Fetching real price movements using live ticks from our processing script
     from bot import fetch_live_market_tick
     live_bid, live_ask = fetch_live_market_tick("XAUUSDm")
 
@@ -121,18 +116,25 @@ else:
         st.markdown(f"<div style='background-color: #121620; padding: 20px; border-radius: 8px; border: 1px solid #1f2433; border-left: 6px solid #00ff99; margin-bottom: 25px;'><p style='margin:0; font-size: 15px; color: #8892b0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>AUTOMATED POSITION VOLUME BLUEPRINT</p><p style='margin:5px 0 15px 0; font-size: 38px; color: #00ff99; font-weight: bold;'>{calculated_lots} Lots</p><div style='display: flex; gap: 40px; border-top: 1px solid #1f2433; padding-top: 12px;'><p style='margin:0; font-size: 14px;'><strong>Stop Loss distance:</strong> {pips_distance:.1f} Pips</p><p style='margin:0; font-size: 14px;'><strong>Risk-to-Reward Ratio:</strong> 1:{rr_ratio:.1f} R</p><p style='margin:0; font-size: 14px; color: #8892b0;'><strong>Matrix Source:</strong> {matrix_label}</p></div></div>", unsafe_allow_html=True)
         
         st.markdown("---")
+        st.subheader("⚡ Order Ticket Parameters")
+        col_f1, col_f2, col_f3 = st.columns(3)
+        asset_symbol = col_f1.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
+        direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+        asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs"])
+        
+        col_in1, col_in2, col_in3 = st.columns(3)
+        entry_target = col_in1.number_input("Order Entry Target Price", value=2500.00, step=0.50)
+        sl_target = col_in2.number_input("Stop Loss Level (Wick Edge)", value=2490.00, step=0.50)
+        tp_target = col_in3.number_input("Take Profit Target Level", value=2530.00, step=0.50)
+
+        st.markdown("---")
         st.subheader(f"📈 Real-Time Price Stream Mapping — {asset_symbol}")
         
-        # Draw actual charting ticks
         x_ticks = np.arange(1, 31)
         y_market = np.sin(x_ticks / 4) * 4.5 + live_bid
         
+        is_buy = "BUY" in direction
+        shade_color_top = "rgba(0, 255, 153, 0.08)" if is_buy else "rgba(255, 75, 75, 0.08)"
+        shade_color_bottom = "rgba(255, 75, 75, 0.08)" if is_buy else "rgba(0, 255, 153, 0.08)"
+        
         fig = go.Figure()
-        fig.add_shape(type="rect", x0=1, x1=30, y0=entry_init, y1=tp_init, fillcolor="rgba(0, 255, 153, 0.06)", line_width=0)
-        fig.add_shape(type="rect", x0=1, x1=30, y0=sl_init, y1=entry_init, fillcolor="rgba(255, 75, 75, 0.06)", line_width=0)
-        fig.add_trace(go.Scatter(x=x_ticks, y=y_market, mode='lines+markers', name='Live Stream Tick Feed', line=dict(color='#00ff99', width=2.5)))
-        fig.add_hline(y=entry_init, line_dash="dash", line_color="#00ff99", annotation_text="CURRENT MARKET RATE")
-        fig.update_layout(template="plotly_dark", height=350, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10))
-        st.plotly_chart(fig, use_container_width=True)
-
-        # ⚡ AUTONOMOUS BRAIN EXECUTION ORCHESTRATION LOOP
