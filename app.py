@@ -29,31 +29,36 @@ if not st.session_state.logged_in:
     st.markdown("<p style='text-align: center; color: #888888;'>Institutional Cloud Execution Portal & Algorithmic Router</p>", unsafe_allow_html=True)
     st.markdown("---")
     auth_col1, auth_col2, auth_col3 = st.columns([1, 1.4, 1])
-    with auth_col2:
-        gate_mode = st.radio("Choose Terminal Action", ["Sign In to Workspace", "Register New Trader Account"], horizontal=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if gate_mode == "Sign In to Workspace":
-            user_input = st.text_input("Workspace Username Key").strip().lower()
-            pass_input = st.text_input("Access Password", type="password").strip()
-            if st.button("Authorize Connection Session", type="primary", use_container_width=True):
-                if user_input in st.session_state.user_database and st.session_state.user_database[user_input]["password"] == pass_input:
-                    st.session_state.logged_in = True
-                    st.session_state.username = user_input
-                    st.rerun()
-                else: st.error("Invalid Username or Password. Session Authorization Denied.")
-        else:
-            st.subheader("📝 Trader Registration Form")
-            reg_name = st.text_input("Your Full Name")
-            reg_email = st.text_input("Your Email Address")
-            reg_user = st.text_input("Choose Unique Username").strip().lower()
-            reg_pass = st.text_input("Create Access Password", type="password").strip()
-            if st.button("Generate Workspace Credentials", type="primary", use_container_width=True):
-                if not reg_name or not reg_email or not reg_user or not reg_pass: st.warning("Please fill out all fields.")
-                elif reg_user in st.session_state.user_database: st.error("This username is already taken.")
-                else:
-                    st.session_state.user_database[reg_user] = {"password": reg_pass, "name": reg_name, "email": reg_email, "joined": datetime.now().strftime("%Y-%m-%d %H:%M")}
-                    st.success("Account created successfully! Switch to 'Sign In' above to login.")
-                    st.balloons()
+    
+    # Left-aligned assignment for authorization container setup
+    gate_mode = auth_col2.radio("Choose Terminal Action", ["Sign In to Workspace", "Register New Trader Account"], horizontal=True)
+    auth_col2.markdown("<br>", unsafe_allow_html=True)
+    
+    if gate_mode == "Sign In to Workspace":
+        user_input = auth_col2.text_input("Workspace Username Key").strip().lower()
+        pass_input = auth_col2.text_input("Access Password", type="password").strip()
+        if auth_col2.button("Authorize Connection Session", type="primary", use_container_width=True):
+            if user_input in st.session_state.user_database and st.session_state.user_database[user_input]["password"] == pass_input:
+                st.session_state.logged_in = True
+                st.session_state.username = user_input
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password. Session Authorization Denied.")
+    else:
+        st.subheader("📝 Trader Registration Form")
+        reg_name = auth_col2.text_input("Your Full Name")
+        reg_email = auth_col2.text_input("Your Email Address")
+        reg_user = auth_col2.text_input("Choose Unique Username").strip().lower()
+        reg_pass = auth_col2.text_input("Create Access Password", type="password").strip()
+        if auth_col2.button("Generate Workspace Credentials", type="primary", use_container_width=True):
+            if not reg_name or not reg_email or not reg_user or not reg_pass:
+                st.warning("Please fill out all fields.")
+            elif reg_user in st.session_state.user_database:
+                st.error("This username is already taken.")
+            else:
+                st.session_state.user_database[reg_user] = {"password": reg_pass, "name": reg_name, "email": reg_email, "joined": datetime.now().strftime("%Y-%m-%d %H:%M")}
+                st.success("Account created successfully! Switch to 'Sign In' above to login.")
+                st.balloons()
 else:
     # 📈 FULL SYSTEM METRIC OPERATIONAL WORKSPACE
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
@@ -131,29 +136,21 @@ else:
         # Calculate Risk Dollar Safeguard Budget based on sidebar allocation
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
-        with m_c1:
-            st.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
-        with m_c2:
-            st.metric(label="LIVE BID PRICE FEED", value=f"${live_bid:,.2f}")
-        with m_c3:
-            st.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
-        with m_c4:
-            st.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
+        m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
+        m_c2.metric(label="LIVE BID PRICE FEED", value=f"${live_bid:,.2f}")
+        m_c3.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
+        m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🔥 Order Ticket Parameters")
         
-        # Interactive UI Entry Framework Fields
+        # Interactive UI Entry Framework Fields (Row 1)
         o_col1, o_col2, o_col3 = st.columns(3)
-        with o_col1:
-            asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
-        with o_col2:
-            order_direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-        with o_col3:
-            asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
+        asset_suffix = o_col1.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
+        order_direction = o_col2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+        asset_class = o_col3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
 
+        # Entry Row Parametric Mappings (Row 2) - Bypasses indentation dependencies
         o_col4, o_col5, o_col6 = st.columns(3)
-        with o_col4:
-            entry_price = st.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
-        with o_col5:
-            # Set default stop loss slightly below entry price for Buy Limit
+        entry_price = o_col4.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+        
