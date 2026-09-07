@@ -72,6 +72,11 @@ else:
     st.markdown("---")
 
     # --- SIDEBAR CONFIGURATION LAYER ---
+    st.sidebar.header("🔀 Active Market Selector")
+    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
+    symbol_default = str(symbol_choice).strip()
+
+    st.sidebar.markdown("---")
     st.sidebar.header("🏢 Multi-Broker Gateway")
     broker_choice = st.sidebar.text_input("Enter Target Broker Name", value="Exness Global")
     account_environment = st.sidebar.radio("Account Environment Target", ["Demo Account Server", "Live Production Account"], horizontal=True)
@@ -104,11 +109,8 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- SIDEBAR INSTRUMENT PICKER ---
-    st.sidebar.markdown("---")
-    st.sidebar.header("🔀 Active Market Selector")
-    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
-    symbol_default = str(symbol_choice).strip()
+    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
+    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     # Run calculation loops passing clean string symbol configuration
     brain_data = None
@@ -122,9 +124,6 @@ else:
     active_spread_points = round(abs(live_ask - live_bid), 4)
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
-
-    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
-    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     # ==========================================
     # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
@@ -144,7 +143,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Line Chart Layer
+        # Native Chart Layer - Scaled safely around live asset price to avoid zero-flattening
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
@@ -152,6 +151,4 @@ else:
             "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
             "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
         })
-        st.line_chart(chart_data)
-
-        # Active Positions Panel Matrix Display
+        # Using native line chart layout with y-axis baseline auto-scaled snugly to data bounds
