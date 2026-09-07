@@ -26,7 +26,8 @@ broker_id = st.sidebar.number_input("Account Login ID Number", value=474239881, 
 broker_pass = st.sidebar.text_input("Trading Access Password", type="password", value="Pu,24ppy")
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value="Exness-MT5-Trial15")
 
-if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
+# FIX: Layout update optimized using width="stretch"
+if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", width="stretch"):
     st.session_state.gateway_connected = True
     st.sidebar.success("Gateway linked successfully to cloud router nodes!")
 
@@ -39,13 +40,15 @@ account_balance = st.sidebar.number_input("Target Account Balance ($)", value=16
 st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
 if not st.session_state.brain_active:
-    if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
+    # FIX: Layout update optimized using width="stretch"
+    if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", width="stretch"):
         if not st.session_state.gateway_connected: st.sidebar.error("Authorize live broker handshake first!")
         else:
             st.session_state.brain_active = True
             st.rerun()
 else:
-    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
+    # FIX: Layout update optimized using width="stretch"
+    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", width="stretch"):
         st.session_state.brain_active = False
         st.rerun()
 
@@ -58,7 +61,7 @@ brain_data = bot.run_autonomous_brain(
     st.session_state.brain_active
 )
 
-# Overrides the Take Profit level using local runtime variables to avoid file system conflicts
+# Overrides Take Profit level using local runtime variables to bypass file system conflicts
 entry_level = brain_data["entry_level"]
 stop_loss = brain_data["stop_loss"]
 risk_distance = abs(entry_level - stop_loss)
@@ -155,7 +158,8 @@ with tab_desk:
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["take_profit"], y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
 
-    st.plotly_chart(fig, use_container_width=True)
+    # FIX: Layout update optimized using width="stretch"
+    st.plotly_chart(fig, width="stretch")
 
 # ==========================================
 # --- TAB 2: LIVE TRADE JOURNAL LOGS -------
@@ -163,18 +167,12 @@ with tab_desk:
 with tab_journal:
     st.markdown("### 🗒️ Execution Ledger Data")
     
-    # Resolves raw list conversions securely
     trades_list = bot.get_archived_trades()
     trades_df = pd.DataFrame(trades_list)
     
     if trades_df.empty:
         st.info("No historical executions recorded in standard environment arrays.")
     else:
-        st.dataframe(trades_df, use_container_width=True)
+        # FIX: Layout update optimized using width="stretch"
+        st.dataframe(trades_df, width="stretch")
         
-    if st.button("🗑️ PURGE ARCHIVED DATABASE ROUTINES", type="secondary"):
-        bot.clear_trade_database()
-        st.toast("Database cleared successfully!")
-        st.rerun()
-
-# ==========================================
