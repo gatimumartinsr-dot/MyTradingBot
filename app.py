@@ -117,39 +117,43 @@ else:
     tab_desk, tab_journal, tab_rules = st.tabs(st.tabs_list)
 
     # Fetch live quotes metrics from backend calculations mapping script
-    live_bid, live_ask = fetch_live_market_tick("XAUUSDm")
+    symbol_default = "XAUUSDm"
+    live_bid, live_ask = fetch_live_market_tick(symbol_default)
+
+    # Fallback to defaults if mock functions don't return values
+    if not live_bid: live_bid = 2514.11
+    if not live_ask: live_ask = 2514.41
 
     with tab_desk:
-        # Live Stream Analytics Row Blocks
+        # Live Stream Analytics Row Blocks (Top Row Metrics)
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
-        m_c1.metric("ACCOUNT AUDIT BALANCE", f"${account_balance:,.2f}")
-        m_c2.metric("LIVE BID PRICE FEED", f"${live_bid:,.2f}")
-        m_c3.metric("LIVE ASK PRICE FEED", f"${live_ask:,.2f}")
-        m_c4.metric("RISK BUDGET SAFEGUARD", f"${account_balance * (risk_percentage / 100.0):,.2f}", f"{risk_percentage}% Alloc Base")
-
-        st.markdown("---")
         
-        # --- ORDER PARAMETER CONTROL INPUTS ---
-        st.subheader("⚡ Order Ticket Parameters")
-        col_f1, col_f2, col_f3 = st.columns(3)
-        asset_symbol = col_f1.text_input("Asset Instrument Symbol Suffix", value="XAUUSDm")
-        direction = col_f2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-        asset_class = col_f3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Major Forex Pairs", "Crypto Cross Assets"])
+        # Calculate Risk Dollar Safeguard Budget based on sidebar allocation
+        risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
-        col_in1, col_in2, col_in3 = st.columns(3)
-        entry_target = col_in1.number_input("Order Entry Target Price", value=live_bid, step=0.50)
-        sl_target = col_in2.number_input("Stop Loss Level (Wick Edge)", value=live_bid - 5.00, step=0.50)
-        tp_target = col_in3.number_input("Take Profit Target Level", value=live_bid + 15.00, step=0.50)
+        with m_c1:
+            st.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
+        with m_c2:
+            st.metric(label="LIVE BID PRICE FEED", value=f"${live_bid:,.2f}")
+        with m_c3:
+            st.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
+        with m_c4:
+            st.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
 
-        st.markdown("---")
-        st.subheader("🧮 Sizing Analytics Verification")
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 🔥 Order Ticket Parameters")
         
-        if "Precious" in asset_class or "XAU" in asset_symbol.upper():
-            pips_distance = abs(entry_target - sl_target) * 10
-        elif "Forex" in asset_class:
-            pips_distance = abs(entry_target - sl_target) * 10000
-        else:
-            pips_distance = abs(entry_target - sl_target)
-            
-        if pips_distance == 0: pips_distance = 1.0
+        # Interactive UI Entry Framework Fields
+        o_col1, o_col2, o_col3 = st.columns(3)
+        with o_col1:
+            asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
+        with o_col2:
+            order_direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+        with o_col3:
+            asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
 
+        o_col4, o_col5, o_col6 = st.columns(3)
+        with o_col4:
+            entry_price = st.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+        with o_col5:
+            # Set default stop loss slightly below entry price for Buy Limit
