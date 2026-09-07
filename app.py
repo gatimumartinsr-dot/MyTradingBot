@@ -102,7 +102,7 @@ with tab_desk:
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
     
-    # Live uP&L Tracking
+    # Live uP&L Tracking Matrix
     upl_val = 0.00
     if st.session_state.brain_active:
         multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
@@ -141,7 +141,7 @@ with tab_desk:
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
-    # 🌟 VISUAL SIGNALS OVERLAY FILTER MATCHING THE LIVE ENGINE STATUS
+    # Visual Execution Signals Overlay Filter
     sig_text = "🟢 HELIX AUTONOMOUS BUY" if "BULLISH" in brain_data["market_trend"] else "🔴 HELIX AUTONOMOUS SELL"
     sig_color = "#00ff99" if "BULLISH" in brain_data["market_trend"] else "#ff3366"
     sig_y = min(c_low) - (scale * 1.5) if "BULLISH" in brain_data["market_trend"] else max(c_high) + (scale * 1.5)
@@ -174,4 +174,5 @@ with tab_desk:
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
+    # 🛠️ FIXED STRUCTURE INDENTATION MATRIX BLOCK
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
