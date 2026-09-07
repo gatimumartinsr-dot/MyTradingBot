@@ -91,7 +91,7 @@ else:
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=10.0, max_value=100000.0, value=161.53, step=10.0)
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🧠 Autonomous Hands-Free Mode")
+    st.sidebar.header("🧠 Autonomous Hands-Hands Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE AUTONOMOUS BRAIN", type="primary", use_container_width=True):
             if not st.session_state.gateway_connected:
@@ -107,9 +107,13 @@ else:
     # --- DESK TAB LAYOUT SEPARATION MANAGER ---
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
-    symbol_default = "XAUUSDm"
-    
-    # Run calculation loops
+    # 🏢 NEW FEATURE: FRONT-END GLOBAL CURRENCY INSTRUMENT PICKER
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔀 Active Market Selector")
+    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm (Gold Ounce)", "BTCUSDm (Bitcoin Crypto)", "EURUSDm (Euro FX Spot)"])
+    symbol_default = symbol_choice.split(" ")[0]
+
+    # Run calculation loops passing chosen symbol dynamically
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -117,11 +121,9 @@ else:
         live_ask = brain_data.get("live_ask", 2514.41)
     else:
         live_bid, live_ask = fetch_live_market_tick(symbol_default)
-        if not live_bid: live_bid = 2514.11
-        if not live_ask: live_ask = 2514.41
 
-    active_spread_points = round(abs(live_ask - live_bid), 2)
-    max_allowable_spread = 0.50
+    active_spread_points = round(abs(live_ask - live_bid), 4)
+    max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
     # ==========================================
@@ -132,8 +134,8 @@ else:
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
         m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
-        m_c2.metric(label="LIVE BID PRICE FEED", value=f"${live_bid:,.2f}")
-        m_c3.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
+        m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.2f}")
+        m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.2f}")
         m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc", delta_color="normal")
 
         if brain_data and "market_trend" in brain_data:
@@ -142,9 +144,9 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Native Line Chart Layer
+        # Native Line Chart Layer
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📊 Real-Time Matrix Market Trend Monitor (XAUUSDm)")
+        st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
         chart_data = pd.DataFrame({
             "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
@@ -152,8 +154,3 @@ else:
         })
         st.line_chart(chart_data)
 
-        # Active Positions Panel Matrix Display (Bracket logic fixed and closed)
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📋 Active Open Position Matrix")
-        
-        if brain_data and "positions_matrix" in brain_data:
