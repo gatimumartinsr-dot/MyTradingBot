@@ -145,5 +145,5 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📋 Active Open Position Matrix")
         
-        # ⚡ FIXED INDENTATION NODE: Strictly aligned spacing parameters for dynamic array evaluations
+        # ⚡ FIXED MAPPING BLOCK: Perfectly aligned block strings matching strict 4-space layout controls
         if brain_data and "positions_matrix" in brain_data:
