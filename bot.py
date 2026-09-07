@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import json
 import os
-from datetime import datetime
 
 DB_FILE = "trades.json"
 
@@ -14,7 +13,7 @@ def init_trade_database():
             json.dump([], f)
 
 def clear_trade_database():
-    """Completely wipes out all historical entries inside the database layer."""
+    """Wipes all historical entries inside the database layer."""
     try:
         with open(DB_FILE, "w") as f:
             json.dump([], f)
@@ -25,7 +24,6 @@ def clear_trade_database():
 def fetch_live_market_tick(symbol="XAUUSDm"):
     try:
         base_bid = 2514.11 + random.uniform(-0.5, 0.5)
-        # Adding a dynamic spread factor to test our new guardrail rules
         spread = round(random.uniform(0.15, 0.65), 2)
         base_ask = base_bid + spread
         return round(base_bid, 2), round(base_ask, 2)
@@ -97,7 +95,7 @@ def dispatch_live_order_matrix(order_payload):
             "Entry": float(order_payload.get("entry")),
             "Stop Loss": float(order_payload.get("sl")),
             "Take Profit": float(order_payload.get("tp")),
-            "Status": "EXECUTED_SUCCESS"
+            "Status": "PROCESSED_ROUTED"
         }
         
         trades.append(new_trade_entry)
