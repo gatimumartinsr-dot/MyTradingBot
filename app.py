@@ -121,7 +121,6 @@ else:
 
     symbol_default = "XAUUSDm"
     
-    # 🧠 Run calculation loops
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -156,5 +155,5 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {rsi_val:.2f}` | State Matrix Boundary: `[{rsi_status}]`")
 
-        # Live Candlestick Graph Block
+        # Front-end Independent Candlestick Generation Layout Block
         st.markdown("<br>", unsafe_allow_html=True)
