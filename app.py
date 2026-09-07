@@ -101,7 +101,6 @@ with tab_desk:
         c_close.append(c_val)
         c_high.append(max(o_val, c_val) + (scale * 0.3))
         c_low.append(min(o_val, c_val) - (scale * 0.3))
-        # ⚡ FIXED TIME COORDINATES: Using clean numbers to satisfy Plotly shape requirements
         c_time.append(i)
         
     fig = go.Figure(data=[go.Candlestick(
@@ -112,17 +111,17 @@ with tab_desk:
     # Premium Typography & Standard Professional Custom Layout Parameters
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
-        paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=400,
-        margin=dict(l=10, r=10, t=10, b=10),
+        paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
+        margin=dict(l=10, r=10, t=15, b=10),
         xaxis=dict(showgrid=True, gridcolor='#1f2433', tickmode='array', tickvals=[0, 10, 20, 29], ticktext=['M-30', 'M-20', 'M-10', 'Live'], tickfont=dict(family="Arial")),
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    # RECTANGULAR ORDER BLOCK (OB) SHAPE INJECTION
+    # 🟦 FIXED RECTANGULAR ORDER BLOCK (OB) SHAPE INJECTION
     ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
-        fillcolor="rgba(255, 170, 0, 0.14)", line_color="#ffaa00", line_width=1,
+        fillcolor="rgba(255, 170, 0, 0.12)", line_color="#ffaa00", line_width=1,
         annotation_text="VALIDATED ORDER BLOCK CONCENTRATION", annotation_position="top left",
         annotation_font=dict(size=9, color="#ffaa00", family="Courier New")
     )
@@ -131,25 +130,28 @@ with tab_desk:
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
 
-    # RISK-TO-REWARD POSITION BOX SHADING FOR ORDER ENTRY ONLY
-    # Safely maps the execution window boundaries inside the final active candle segments (Indices 26 to 29)
+    # 🟩 FIXED POSITION TOOL: Using 'add_shape(type="rect")' to cleanly limit shading to the order execution window
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-        fig.add_vrect(
-            x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5),
-            fillcolor="rgba(0, 255, 153, 0.12)", line_width=0, annotation_text="LONG TARGET", annotation_position="top center"
+        # Long target box
+        fig.add_shape(
+            type="rect", x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5),
+            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0
         )
-        fig.add_vrect(
-            x0=26, x1=29, y0=brain_data["stop_loss"], y1=brain_data["entry_level"],
-            fillcolor="rgba(255, 51, 102, 0.12)", line_width=0, annotation_text="LONG RISK", annotation_position="bottom center"
+        # Long risk box
+        fig.add_shape(
+            type="rect", x0=26, x1=29, y0=brain_data["stop_loss"], y1=brain_data["entry_level"],
+            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0
         )
     else:
-        fig.add_vrect(
-            x0=26, x1=29, y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"],
-            fillcolor="rgba(0, 255, 153, 0.12)", line_width=0, annotation_text="SHORT TARGET", annotation_position="bottom center"
+        # Short target box
+        fig.add_shape(
+            type="rect", x0=26, x1=29, y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"],
+            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0
         )
-        fig.add_vrect(
-            x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["stop_loss"],
-            fillcolor="rgba(255, 51, 102, 0.12)", line_width=0, annotation_text="SHORT RISK", annotation_position="top center"
+        # Short risk box
+        fig.add_shape(
+            type="rect", x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["stop_loss"],
+            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0
         )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -165,3 +167,6 @@ with tab_desk:
     st.markdown("### 🔥 Order Entry Gateway Router")
     o_c1, o_c2 = st.columns(2)
     order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+    entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+    calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
+    st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
