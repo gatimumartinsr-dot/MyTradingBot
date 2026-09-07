@@ -121,12 +121,20 @@ else:
     tab_desk, tab_journal, tab_rules = st.tabs(st.tabs_list)
 
     symbol_default = "XAUUSDm"
-    live_bid, live_ask = fetch_live_market_tick(symbol_default)
-
-    if not live_bid: live_bid = 2514.11
-    if not live_ask: live_ask = 2514.41
+    
+    # 🧠 Dynamic Telemetry Brain Router 
+    brain_data = None
+    if st.session_state.brain_active:
+        brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
+        live_bid = brain_data.get("live_bid", 2514.11)
+        live_ask = brain_data.get("live_ask", 2514.41)
+    else:
+        live_bid, live_ask = fetch_live_market_tick(symbol_default)
+        if not live_bid: live_bid = 2514.11
+        if not live_ask: live_ask = 2514.41
 
     with tab_desk:
+        # Top Analytics Metric Block Array
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
@@ -138,21 +146,14 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🔥 Order Ticket Parameters")
         
+        # Row 1 Parameters Layout Configuration
         asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
         order_direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
         asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
 
+        # Row 2 Parameters Layout Configuration (Anti-Indentation Error Format)
         entry_price = st.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
         
         default_sl = entry_price - 5.0 if order_direction == "BUY LIMIT" else entry_price + 5.0
         stop_loss = st.number_input("Stop Loss Level (Wick Edge)", value=default_sl, format="%.2f")
         
-        default_tp = entry_price + 15.0 if order_direction == "BUY LIMIT" else entry_price - 15.0
-        take_profit = st.number_input("Take Profit Target Level", value=default_tp, format="%.2f")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 🧮 Sizing Analytics Verification")
-        
-        points_at_risk = abs(entry_price - stop_loss)
-        if points_at_risk > 0:
-            calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_price, stop_loss)
