@@ -138,26 +138,34 @@ with tab_desk:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Active running positions matrix table
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 📋 Active Open Position Matrix")
-    positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
-    st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
-
-    # Manual input box routing gateway
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🔥 Order Entry Gateway Router")
-    o_c1, o_c2 = st.columns(2)
-    order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-    entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
-    calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
-    st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
-    if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
-
-    if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
-        st.success("Order packet successfully transmitted to MetaTrader 5 cloud network node server.")
-
 # ==========================================
 # --- TAB 2: LIVE TRADE JOURNAL LOGS -------
 # ==========================================
 with tab_journal:
+    st.markdown("### 🗒️ Execution Ledger Data")
+    trades_df = get_archived_trades()
+    
+    if trades_df.empty:
+        st.info("No historical executions recorded in standard environment arrays.")
+    else:
+        st.dataframe(trades_df, use_container_width=True)
+        
+    if st.button("🗑️ PURGE ARCHIVED DATABASE ROUTINES", type="secondary"):
+        clear_trade_database()
+        st.toast("Database cleared successfully!")
+        st.rerun()
+
+# ==========================================
+# --- TAB 3: SYSTEM CHECK RULES AUDIT ------
+# ==========================================
+with tab_rules:
+    st.markdown("### 📋 Automated Pre-Flight Safety Parameters")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.checkbox("Broker Node Handshake Active", value=st.session_state.gateway_connected, disabled=True)
+        st.checkbox("Algorithmic Engine Authorized", value=st.session_state.brain_active, disabled=True)
+    with c2:
+        st.checkbox("Spread Buffer Under Maximum Cap", value=not is_spread_breached, disabled=True)
+        st.checkbox("Risk Metrics Within Safeguard Range", value=(risk_percentage <= 5.0), disabled=True)
+
