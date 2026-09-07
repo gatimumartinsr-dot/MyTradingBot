@@ -143,7 +143,8 @@ with tab_desk:
 # ==========================================
 with tab_journal:
     st.markdown("### 🗒️ Execution Ledger Data")
-    trades_df = get_archived_trades()
+    trades_list = get_archived_trades()
+    trades_df = pd.DataFrame(trades_list)  # Converts list format to DataFrame safely
     
     if trades_df.empty:
         st.info("No historical executions recorded in standard environment arrays.")
@@ -168,4 +169,3 @@ with tab_rules:
     with c2:
         st.checkbox("Spread Buffer Under Maximum Cap", value=not is_spread_breached, disabled=True)
         st.checkbox("Risk Metrics Within Safeguard Range", value=(risk_percentage <= 5.0), disabled=True)
-
