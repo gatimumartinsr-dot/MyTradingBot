@@ -142,10 +142,8 @@ else:
         tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
         tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
 
-        # Active Positions Panel Matrix Display
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📋 Active Open Position Matrix")
         
+        # ⚡ FIXED INDENTATION NODE: Strictly aligned spacing parameters for dynamic array evaluations
         if brain_data and "positions_matrix" in brain_data:
-            positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
-        else:
