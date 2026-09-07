@@ -102,11 +102,11 @@ with tab_desk:
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
     
-    # uP&L Matrix
+    # Live uP&L Tracking
     upl_val = 0.00
     if st.session_state.brain_active:
         multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
-        base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 2495.0)
+        base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 4413.26)
         
         if "BULLISH" in brain_data["market_trend"]:
             upl_val = round((live_bid - base_entry) * multiplier, 2)
@@ -119,11 +119,11 @@ with tab_desk:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     
-    # 🌟 FIX: Dynamic time seed tracks millisecond updates for moving candlestick ranges
+    # Generate candlestick data safely
     np.random.seed(int(time.time() * 1000) % 2**32)
     c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
-    walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
-    scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 0.8)
+    walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 12.5))
+    scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 2.5)
     
     for i in range(30):
         step = np.random.uniform(-scale, scale * 1.04)
@@ -141,6 +141,19 @@ with tab_desk:
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
+    # 🌟 VISUAL SIGNALS OVERLAY FILTER MATCHING THE LIVE ENGINE STATUS
+    sig_text = "🟢 HELIX AUTONOMOUS BUY" if "BULLISH" in brain_data["market_trend"] else "🔴 HELIX AUTONOMOUS SELL"
+    sig_color = "#00ff99" if "BULLISH" in brain_data["market_trend"] else "#ff3366"
+    sig_y = min(c_low) - (scale * 1.5) if "BULLISH" in brain_data["market_trend"] else max(c_high) + (scale * 1.5)
+    
+    fig.add_trace(go.Scatter(
+        x=["M-15"], y=[sig_y], mode="markers+text",
+        marker=dict(symbol="triangle-up" if "BULLISH" in brain_data["market_trend"] else "triangle-down", size=14, color=sig_color),
+        text=[sig_text], textposition="bottom center" if "BULLISH" in brain_data["market_trend"] else "top center",
+        textfont=dict(family="Courier New", size=11, color=sig_color),
+        name="Algorithmic Execution Signal Node"
+    ))
+
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
         paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
@@ -149,7 +162,7 @@ with tab_desk:
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
+    ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 2.50)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
         fillcolor="rgba(255, 170, 0, 0.12)", line_color="#ffaa00", line_width=1,
@@ -162,14 +175,3 @@ with tab_desk:
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["take_profit"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
-    else:
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["take_profit"], y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
-
-    st.plotly_chart(fig, width="stretch")
-
-    # 🔁 STREAM DATA REFRESH CONTROL BLOCK
-    st.markdown("---")
-    st.markdown("##### 🔁 Automated Stream Data Feed Engine")
