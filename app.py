@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import urllib.request
 import json
-from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades, clear_trade_database, log_user_activity, get_audit_logs, clear_audit_ledger
+from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades, clear_trade_database, log_user_activity, get_audit_logs, clear_audit_ledger, store_manual_note, get_manual_notes
 
 # Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -35,8 +35,7 @@ if not st.session_state.logged_in:
                 st.session_state.username = user_input
                 log_user_activity(user_input, "USER_LOGIN_SUCCESS", "Successfully authorized security entry key protocol.")
                 st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
+            else: st.error("Invalid Username or Password.")
     else:
         st.subheader("📝 Trader Registration Form")
         reg_name = auth_col2.text_input("Your Full Name")
@@ -44,15 +43,13 @@ if not st.session_state.logged_in:
         reg_user = auth_col2.text_input("Choose Unique Username").strip().lower()
         reg_pass = auth_col2.text_input("Create Access Password", type="password").strip()
         if auth_col2.button("Generate Workspace Credentials", type="primary", use_container_width=True):
-            if not reg_name or not reg_email or not reg_user or not reg_pass:
-                st.warning("Please fill out all fields.")
+            if not reg_name or not reg_email or not reg_user or not reg_pass: st.warning("Please fill out all fields.")
             else:
                 st.session_state.user_database[reg_user] = {"password": reg_pass, "name": reg_name, "email": reg_email, "joined": datetime.now().strftime("%Y-%m-%d %H:%M")}
                 log_user_activity(reg_user, "NEW_USER_REGISTRATION", f"Created account instance under email {reg_email}")
                 st.success("Account created successfully!")
 else:
     operator_key_id = st.session_state.username
-    
     st.markdown(f"<div style='float: right; color: #8892b0;'>Operator: {operator_key_id.upper()}</div>", unsafe_allow_html=True)
     if st.button("🔒 Sever Connection", type="secondary"):
         log_user_activity(operator_key_id, "USER_LOGOUT", "Severed workstation network socket channel.")
@@ -94,8 +91,7 @@ else:
     st.sidebar.header("🧠 Autonomous Hands-Free Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE AUTONOMOUS BRAIN", type="primary", use_container_width=True):
-            if not st.session_state.gateway_connected:
-                st.sidebar.error("Aborted: Authorize Live Broker Gateway first!")
+            if not st.session_state.gateway_connected: st.sidebar.error("Aborted: Authorize Live Broker Gateway first!")
             else:
                 st.session_state.brain_active = True
                 log_user_activity(operator_key_id, "AUTONOMOUS_BRAIN_START", f"Engaged automated scanning execution channels on {symbol_default}")
@@ -146,9 +142,10 @@ else:
         tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
         tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
 
-        # Active Positions Panel Matrix Display (Completely re-aligned layout)
+        # Active Positions Panel Matrix Display
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📋 Active Open Position Matrix")
         
         if brain_data and "positions_matrix" in brain_data:
             positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
+        else:
