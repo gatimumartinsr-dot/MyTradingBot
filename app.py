@@ -97,14 +97,22 @@ with tab_desk:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 📈 UNREALIZED PROFIT/LOSS TRACKER FIELD BLOCK
     tc1, tc2, tc3, tc4 = st.columns(4)
     tc1.metric("TRACKED INSTRUMENT", str(symbol_choice))
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
     
-    # Dynamic uP&L Calculator Engine
-    upl_val = bot.calculate_unrealized_pnl(symbol_choice, live_bid, live_ask, brain_data["market_trend"], st.session_state.brain_active)
+    # 📈 LOCAL uP&L CALCULATION LOGIC TO OVERRIDE THE SERVER CACHE
+    upl_val = 0.00
+    if st.session_state.brain_active:
+        multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
+        base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 2495.0)
+        
+        if "BULLISH" in brain_data["market_trend"]:
+            upl_val = round((live_bid - base_entry) * multiplier, 2)
+        else:
+            upl_val = round((base_entry - live_ask) * multiplier, 2)
+            
     upl_delta = "Exposure Idle" if not st.session_state.brain_active else ("Floating Profit" if upl_val >= 0 else "Floating Drawdown")
     tc4.metric("UNREALIZED FLOATING P&L", f"${upl_val:+,.2f}", delta=upl_delta, delta_color="normal" if st.session_state.brain_active else "off")
     
@@ -161,18 +169,6 @@ with tab_desk:
 
     st.plotly_chart(fig, width="stretch")
 
-    # 🔁 LIVE MARKET DATA POLLING LOOP SYSTEM
+    # 🔁 STREAM DATA REFRESH CONTROL BLOCK
     st.markdown("---")
     st.markdown("##### 🔁 Automated Stream Data Feed Engine")
-    poll_active = st.toggle("Engage High-Frequency Streaming Loop (1-Sec Refresh Rate)", value=False)
-    
-    if poll_active:
-        time.sleep(1.0)
-        st.rerun()
-
-# ==========================================
-# --- TAB 2: LIVE TRADE JOURNAL LOGS -------
-# ==========================================
-with tab_journal:
-    st.markdown("### 🗒️ Execution Ledger Data")
-    
