@@ -30,7 +30,6 @@ if not st.session_state.logged_in:
     st.markdown("---")
     auth_col1, auth_col2, auth_col3 = st.columns([1, 1.4, 1])
     
-    # Left-aligned assignment for authorization container setup
     gate_mode = auth_col2.radio("Choose Terminal Action", ["Sign In to Workspace", "Register New Trader Account"], horizontal=True)
     auth_col2.markdown("<br>", unsafe_allow_html=True)
     
@@ -121,19 +120,14 @@ else:
     st.tabs_list = ["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"]
     tab_desk, tab_journal, tab_rules = st.tabs(st.tabs_list)
 
-    # Fetch live quotes metrics from backend calculations mapping script
     symbol_default = "XAUUSDm"
     live_bid, live_ask = fetch_live_market_tick(symbol_default)
 
-    # Fallback to defaults if mock functions don't return values
     if not live_bid: live_bid = 2514.11
     if not live_ask: live_ask = 2514.41
 
     with tab_desk:
-        # Live Stream Analytics Row Blocks (Top Row Metrics)
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
-        
-        # Calculate Risk Dollar Safeguard Budget based on sidebar allocation
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
         m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
@@ -144,13 +138,21 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🔥 Order Ticket Parameters")
         
-        # Interactive UI Entry Framework Fields (Row 1)
-        o_col1, o_col2, o_col3 = st.columns(3)
-        asset_suffix = o_col1.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
-        order_direction = o_col2.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-        asset_class = o_col3.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
+        asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
+        order_direction = st.radio("Order Strategy Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+        asset_class = st.selectbox("Asset Class Specification", ["Precious Metals (Gold/Silver)", "Foreign Currencies (FX)", "Crypto Digital Assets", "Equity Indexes"])
 
-        # Entry Row Parametric Mappings (Row 2) - Bypasses indentation dependencies
-        o_col4, o_col5, o_col6 = st.columns(3)
-        entry_price = o_col4.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+        entry_price = st.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
         
+        default_sl = entry_price - 5.0 if order_direction == "BUY LIMIT" else entry_price + 5.0
+        stop_loss = st.number_input("Stop Loss Level (Wick Edge)", value=default_sl, format="%.2f")
+        
+        default_tp = entry_price + 15.0 if order_direction == "BUY LIMIT" else entry_price - 15.0
+        take_profit = st.number_input("Take Profit Target Level", value=default_tp, format="%.2f")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 🧮 Sizing Analytics Verification")
+        
+        points_at_risk = abs(entry_price - stop_loss)
+        if points_at_risk > 0:
+            calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_price, stop_loss)
