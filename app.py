@@ -115,6 +115,26 @@ else:
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
+    # ⚡ PERMANENT RESOLUTION: Flattening data extraction keys down to the root level.
+    # This completely eliminates nested if/else statements within tab_desk, making indentation errors impossible.
+    matrix_raw_data = []
+    if brain_data and "positions_matrix" in brain_data:
+        matrix_raw_data = brain_data["positions_matrix"]
+    else:
+        matrix_raw_data = [{
+            "Ticket ID": "Pending IDLE", 
+            "Instrument": str(symbol_default), 
+            "Direction": "IDLE", 
+            "Volume Lots": 0.00, 
+            "Entry Price": 0.00, 
+            "Current Price": 0.00, 
+            "TP Target": 0.00, 
+            "SL Target": 0.00, 
+            "Status Matrix": "AWAITING_TRIGGER", 
+            "Net Floating PnL": "$0.00"
+        }]
+    positions_dataframe = pd.DataFrame(matrix_raw_data)
+
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     # ==========================================
@@ -133,17 +153,3 @@ else:
             trend_label = brain_data["market_trend"]
             trend_color = "green" if "BULLISH" in trend_label else "red"
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
-            st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
-        tc1, tc2, tc3 = st.columns(3)
-        tc1.metric("TRACKED INSTRUMENT", str(symbol_default))
-        tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
-        tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📋 Active Open Position Matrix")
-        
-        # ⚡ FIXED MAPPING BLOCK: Perfectly aligned block strings matching strict 4-space layout controls
-        if brain_data and "positions_matrix" in brain_data:
