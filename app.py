@@ -63,7 +63,7 @@ else:
     
     if st.session_state.brain_active:
         brain_status_color = "#00ff99"
-        brain_status_label = "● AUTONOMOUS COBRAIN ACTIVE"
+        brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE"
     elif st.session_state.gateway_connected:
         brain_status_color = "#00ffff"
         brain_status_label = "● MT5 HANDSHAKE AUTHENTICATED"
@@ -131,19 +131,20 @@ else:
         if not live_bid: live_bid = 2514.11
         if not live_ask: live_ask = 2514.41
 
-    # Compute Active Live Spread
     active_spread_points = round(abs(live_ask - live_bid), 2)
     max_allowable_spread = 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
+    # --- TAB 1: REAL-TIME LIVE DESK ---
     with tab_desk:
+        # Live Pricing Metric Bar
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
         m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
         m_c2.metric(label="LIVE BID PRICE FEED", value=f"${live_bid:,.2f}")
         m_c3.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
-        m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
+        m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc", delta_color="normal")
 
         if brain_data and "market_trend" in brain_data:
             trend_label = brain_data["market_trend"]
@@ -153,5 +154,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {rsi_val:.2f}` | State Matrix Boundary: `[{rsi_status}]`")
 
+        # Live Candlestick Graph
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 📈 Algorithmic Performance Metrics Ledger")
+        st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
+        
