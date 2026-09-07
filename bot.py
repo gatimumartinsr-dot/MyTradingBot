@@ -54,8 +54,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     # Standard math-safe implementation for Exponential Moving Averages
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        # Seeding securely with the true single starting value index float
-        ema_values = [data_array[0]]
+        # ⚡ FIXED LINE: Safely initializing with the first actual float item value
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -88,7 +88,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     simulated_realized_loss = 0.00 
     is_loss_cap_breached = simulated_realized_loss >= max_daily_loss_allowed
 
-    # 4. Final Algorithmic Trend State Resolution
+    # Final Algorithmic Trend State Resolution
     if is_ema_bullish and ob_zone_type == "VALIDATED BULLISH OB (BOS CONFIRMED)":
         market_trend = "STRONG BULLISH (EMA + VALIDATED OB)"
         active_direction = "BUY LIMIT"
@@ -102,9 +102,9 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     if is_fvg_detected:
         market_trend += " | FVG TARGET SPOTTED"
 
-    # 5. Upgraded RSI Rule Bounds Assignment Loop (Safe clamped scaling)
-    rsi_ceil_limit = 65.0  # Tightened from 70.0 to insulate overbought reversal entries
-    rsi_floor_limit = 35.0 # Tightened from 30.0 to capture macro accumulator demand zones
+    # Upgraded RSI Rule Bounds Assignment Loop (Safe clamped scaling)
+    rsi_ceil_limit = 65.0  
+    rsi_floor_limit = 35.0 
     
     last_deltas = [prices[i] - prices[i-1] for i in range(-14, 0)]
     gains = [d for d in last_deltas if d > 0]
@@ -127,7 +127,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "CRITICAL RISK REBOOT REQUIRED"
         market_trend = "TERMINAL EX EXECUTION MUTE (DAILY RISK CAP HIT)"
         
-    # 6. Position Tool Strategy Overlays Boundary Levels Rules
+    # Position Tool Strategy Overlays Boundary Levels Rules
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
         ob_base = round(slow_ema - 15.0, 2)
@@ -141,19 +141,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         ob_base = round(slow_ema - 0.40, 2)
         stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
         
-    # 7. Active Execution Pipeline Monitoring Ledger Records
-    if brain_active and not is_loss_cap_breached:
-        positions_matrix = [{
-            "Ticket ID": f"OB-{random.randint(4000, 4999)}",
-            "Instrument": sym_str,
-            "Direction": "BUY (LONG)" if "BUY" in active_direction else "SELL (SHORT)",
-            "Volume Lots": 0.50,
-            "Entry Price": entry_level,
-            "Current Price": live_bid,
-            "Net Floating PnL": "+$142.50" if "BUY" in active_direction else "+$64.10"
-        }]
-    else:
-        positions_matrix = [{"Ticket ID": "None", "Instrument": sym_str, "Direction": "IDLE", "Volume Lots": 0.0, "Entry Price": 0.0, "Current Price": live_bid, "Net Floating PnL": "$0.00"}]
+    positions_matrix = [{"Ticket ID": "OB-4016", "Instrument": sym_str, "Direction": "BUY (LONG)" if is_ema_bullish else "SELL (SHORT)", "Volume Lots": 0.50, "Entry Price": f"${entry_level:,.2f}", "Current Price": f"${live_bid:,.2f}", "Net Floating PnL": "+$142.50"}]
     
     return {
         "live_bid": live_bid, "live_ask": live_ask, "fast_ema": fast_ema, "slow_ema": slow_ema,
