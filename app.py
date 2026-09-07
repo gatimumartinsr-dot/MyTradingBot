@@ -143,21 +143,21 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Isolated Chart Block with proper exception formatting
+        # Flat visual charting layout completely free of try/catch blocks to ensure no syntax break matches
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
         
-        try:
-            np.random.seed(42)
-            c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
-            walk = live_bid - 3.0
+        np.random.seed(42)
+        c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
+        walk = live_bid - 3.0
+        
+        for idx in range(30):
+            step = np.random.uniform(-1.0, 1.4)
+            o_val = walk
+            c_val = o_val + step
+            walk = c_val
             
-            for idx in range(30):
-                step = np.random.uniform(-1.0, 1.4)
-                o_val = walk
-                c_val = o_val + step
-                walk = c_val
-                
-                c_open.append(o_val)
-                c_close.append(c_val)
-                c_high.append(max(o_val, c_val) + 0.3)
+            c_open.append(o_val)
+            c_close.append(c_val)
+            c_high.append(max(o_val, c_val) + 0.3)
+            c_low.append(min(o_val, c_val) - 0.3)
