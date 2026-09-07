@@ -143,7 +143,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Flat visual charting layout completely free of try/catch blocks to ensure no syntax break matches
+        # Flat visual charting layout 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
         
@@ -161,3 +161,5 @@ else:
             c_close.append(c_val)
             c_high.append(max(o_val, c_val) + 0.3)
             c_low.append(min(o_val, c_val) - 0.3)
+            c_time.append(f"T-{30-idx}")
+            
