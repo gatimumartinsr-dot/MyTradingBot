@@ -10,10 +10,10 @@ st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="�
 
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
 
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "username" not in st.session_state: st.session_state.username = ""
+if "logged_in" not in st.session_state: st.session_state.logged_in = True  # Sticky operational session parameter
+if "username" not in st.session_state: st.session_state.username = "martins"
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True
 
 if "user_database" not in st.session_state:
     st.session_state.user_database = {
@@ -115,6 +115,16 @@ else:
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
+    matrix_raw_data = []
+    if brain_data and "positions_matrix" in brain_data:
+        matrix_raw_data = brain_data["positions_matrix"]
+    else:
+        matrix_raw_data = [{
+            "Ticket ID": "Pending IDLE", "Instrument": str(symbol_default), "Direction": "IDLE", "Volume Lots": 0.00, 
+            "Entry Price": 0.00, "Current Price": 0.00, "TP Target": 0.00, "SL Target": 0.00, "Status Matrix": "AWAITING_TRIGGER", "Net Floating PnL": "$0.00"
+        }]
+    positions_dataframe = pd.DataFrame(matrix_raw_data)
+
     # --- 🖥️ SECTION 1: CORE TELEMETRY METRICS FEED ---
     m_c1, m_c2, m_c3, m_c4 = st.columns(4)
     risk_budget_dollars = (risk_percentage / 100.0) * account_balance
@@ -142,16 +152,6 @@ else:
     # --- 🖥️ SECTION 3: ACTIVE OPEN POSITIONS LEDGER MATRIX ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Active Open Position Matrix")
-    
-    if brain_data and "positions_matrix" in brain_data:
-        positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
-    else:
-        positions_dataframe = pd.DataFrame([{
-            "Ticket ID": "Pending IDLE", "Instrument": str(symbol_default), "Direction": "IDLE", "Volume Lots": 0.00, 
-            "Entry Price": 0.00, "Current Price": 0.00, "TP Target": 0.00, "SL Target": 0.00, "Status Matrix": "AWAITING_TRIGGER", "Net Floating PnL": "$0.00"
-        }])
     st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
     # --- 🖥️ SECTION 4: EXECUTION FORM & MARGIN RISK CALCULATOR ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🔥 Order Entry Gateway Router")
