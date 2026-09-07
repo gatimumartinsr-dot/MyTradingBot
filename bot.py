@@ -1,5 +1,4 @@
 import random
-from datetime import datetime
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
     """
@@ -52,9 +51,11 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
+    # TRUE MATHEMATICAL EXPONENTIAL MOVING AVERAGE SYSTEM
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [data_array]
+        # ⚡ FIXED BASELINE: Seeding the array with the first float index to prevent list types calculation crashes
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -75,23 +76,17 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     elif newest_close < recent_low:
         ob_zone_type = "VALIDATED BEARISH OB (CHoCH CONFIRMED)"
 
-    # --- 🔍 NEW RULE 3: FAIR VALUE GAP (FVG) LIQUIDITY VOID DETECTION ---
-    # Scans the historical index arrays to detect if a 3-candle imbalance window is open
+    # RULE 3: Fair Value Gap (FVG) Liquidity Void Detection
     is_fvg_detected = False
-    fvg_target_price = live_bid
-    
-    # Simulated high/low boundaries for FVG checking
     candle_1_low = live_bid - (8.0 if "BTC" in sym_str else 0.80)
     candle_3_high = live_bid - (2.0 if "BTC" in sym_str else 0.20)
     
     if candle_1_low > candle_3_high:
         is_fvg_detected = True
-        fvg_target_price = round((candle_1_low + candle_3_high) / 2, 2)
 
-    # --- 🔒 NEW RULE 4: MAXIMUM DAILY LOSS CAP CEILING RISK FILTER ---
-    max_daily_loss_allowed = 10.00 # Strict institutional cash stop ceiling
-    simulated_realized_loss = 0.00 # Placeholder tracking absolute account equity drawdown shifts
-    
+    # RULE 4: Maximum Daily Loss Cap Risk Filter
+    max_daily_loss_allowed = 10.00 
+    simulated_realized_loss = 0.00 
     is_loss_cap_breached = simulated_realized_loss >= max_daily_loss_allowed
 
     # 4. Final Algorithmic Trend State Resolution
@@ -125,14 +120,12 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "OVERSOLD (ACCUMULATION)"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    # If your maximum daily loss cap is breached, automatically activate block triggers
     if is_loss_cap_breached:
         rsi_filter_block = True
         rsi_status = "CRITICAL RISK REBOOT REQUIRED"
         market_trend = "TERMINAL EX EXECUTION MUTE (DAILY RISK CAP HIT)"
         
     # 6. Position Tool Strategy Overlays Boundary Levels Rules
-    # Take-Profit boundaries now use the FVG price as a premium target area
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
         ob_zone = round(slow_ema - 5.0, 2)
