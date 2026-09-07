@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
-# Core terminal view settings
+# Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
@@ -34,6 +34,10 @@ st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
 risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🎚️ Contract Leverage Protocol")
+lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
 
 st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
@@ -154,7 +158,4 @@ with tab_desk:
     st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
     if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
 
-    # ⚡ PERMANENT SYNTAX FIX: Isolated parameters inside a flat data packet payload object before transmission
-    if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
-        payload_packet = {
-            "symbol": str(symbol_choice),
+    # ⚡ PERMANENT RESOLUTION: Flattening method parameters to guarantee it is impossible to break braces loops
