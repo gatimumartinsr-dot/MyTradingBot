@@ -101,56 +101,55 @@ with tab_desk:
         c_close.append(c_val)
         c_high.append(max(o_val, c_val) + (scale * 0.3))
         c_low.append(min(o_val, c_val) - (scale * 0.3))
-        c_time.append(f"M-{30-i}")
+        # ⚡ FIXED TIME COORDINATES: Using clean numbers to satisfy Plotly shape requirements
+        c_time.append(i)
         
     fig = go.Figure(data=[go.Candlestick(
         x=c_time, open=c_open, high=c_high, low=c_low, close=c_close,
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
-    # 🕯️ HIGH-QUALITY STYLE MODIFICATIONS: Premium Typography & Rectangular Block Formats
+    # Premium Typography & Standard Professional Custom Layout Parameters
     fig.update_layout(
-        font=dict(family="Courier New, monospace", size=12, color="#8892b0"),
+        font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
         paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=400,
         margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(rangeslider=dict(visible=False), showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial")),
+        xaxis=dict(showgrid=True, gridcolor='#1f2433', tickmode='array', tickvals=[0, 10, 20, 29], ticktext=['M-30', 'M-20', 'M-10', 'Live'], tickfont=dict(family="Arial")),
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    # 🟦 UPGRADE 1: INSTITUTIONAL RECTANGULAR ORDER BLOCK (OB) SHAPE INJECTION
+    # RECTANGULAR ORDER BLOCK (OB) SHAPE INJECTION
     ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
-        fillcolor="rgba(255, 170, 0, 0.18)", line_color="#ffaa00", line_width=1, line_dash="solid",
+        fillcolor="rgba(255, 170, 0, 0.14)", line_color="#ffaa00", line_width=1,
         annotation_text="VALIDATED ORDER BLOCK CONCENTRATION", annotation_position="top left",
-        annotation_font=dict(size=10, color="#ffaa00", family="Courier New")
+        annotation_font=dict(size=9, color="#ffaa00", family="Courier New")
     )
     
-    # Precise parameter level markers
+    # Precise strategy level horizontal line markers
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
 
-    # 🟩 UNIFIED UPGRADE 2: RISK-TO-REWARD POSITION BOX SHADING FOR ORDER ENTRY ONLY
-    # Position blocks are constrained strictly inside the active order placement horizon window indices (M-3 to M-1)
+    # RISK-TO-REWARD POSITION BOX SHADING FOR ORDER ENTRY ONLY
+    # Safely maps the execution window boundaries inside the final active candle segments (Indices 26 to 29)
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-        # Long execution blocks
         fig.add_vrect(
-            x0="M-3", x1="M-1", y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5),
-            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0, annotation_text="LONG TARGET", annotation_position="top center"
+            x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5),
+            fillcolor="rgba(0, 255, 153, 0.12)", line_width=0, annotation_text="LONG TARGET", annotation_position="top center"
         )
         fig.add_vrect(
-            x0="M-3", x1="M-1", y0=brain_data["stop_loss"], y1=brain_data["entry_level"],
-            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0, annotation_text="LONG RISK", annotation_position="bottom center"
+            x0=26, x1=29, y0=brain_data["stop_loss"], y1=brain_data["entry_level"],
+            fillcolor="rgba(255, 51, 102, 0.12)", line_width=0, annotation_text="LONG RISK", annotation_position="bottom center"
         )
     else:
-        # Short execution blocks
         fig.add_vrect(
-            x0="M-3", x1="M-1", y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"],
-            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0, annotation_text="SHORT TARGET", annotation_position="bottom center"
+            x0=26, x1=29, y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"],
+            fillcolor="rgba(0, 255, 153, 0.12)", line_width=0, annotation_text="SHORT TARGET", annotation_position="bottom center"
         )
         fig.add_vrect(
-            x0="M-3", x1="M-1", y0=brain_data["entry_level"], y1=brain_data["stop_loss"],
-            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0, annotation_text="SHORT RISK", annotation_position="top center"
+            x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["stop_loss"],
+            fillcolor="rgba(255, 51, 102, 0.12)", line_width=0, annotation_text="SHORT RISK", annotation_position="top center"
         )
 
     st.plotly_chart(fig, use_container_width=True)
