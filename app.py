@@ -8,9 +8,10 @@ from bot import calculate_position_size, run_autonomous_brain, dispatch_live_ord
 # Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
+# Fixed premium custom CSS layout injection with a 25px top padding to clear browser clipping
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; padding-top: 25px !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
 
-if "logged_in" not in st.session_state: st.session_state.logged_in = True  # Sticky operational session parameter
+if "logged_in" not in st.session_state: st.session_state.logged_in = True  
 if "username" not in st.session_state: st.session_state.username = "martins"
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True
@@ -125,7 +126,7 @@ else:
         }]
     positions_dataframe = pd.DataFrame(matrix_raw_data)
 
-    # --- 🖥️ SECTION 1: CORE TELEMETRY METRICS FEED ---
+    # --- SECTION 1: CORE TELEMETRY METRICS FEED ---
     m_c1, m_c2, m_c3, m_c4 = st.columns(4)
     risk_budget_dollars = (risk_percentage / 100.0) * account_balance
     
@@ -140,7 +141,7 @@ else:
         st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
         st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-    # --- 🖥️ SECTION 2: REAL-TIME MOMENTUM SPREAD MONITOR ---
+    # --- SECTION 2: REAL-TIME MOMENTUM SPREAD MONITOR ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"## 🖥️ Real-Time Trading Desk Matrix")
     st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
@@ -149,9 +150,8 @@ else:
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
 
-    # --- 🖥️ SECTION 3: ACTIVE OPEN POSITIONS LEDGER MATRIX ---
+    # --- SECTION 3: ACTIVE OPEN POSITIONS LEDGER MATRIX ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Active Open Position Matrix")
     st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
-    # --- 🖥️ SECTION 4: EXECUTION FORM & MARGIN RISK CALCULATOR ---
