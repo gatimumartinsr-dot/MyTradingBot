@@ -51,11 +51,11 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
-    # TRUE MATHEMATICAL EXPONENTIAL MOVING AVERAGE SYSTEM
+    # Standard math-safe implementation for Exponential Moving Averages
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        # ⚡ FIXED BASELINE: Seeding the array with the first float index to prevent list types calculation crashes
-        ema_values = [float(data_array[0])]
+        # Seeding securely with the true single starting value index float
+        ema_values = [data_array[0]]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -80,7 +80,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     is_fvg_detected = False
     candle_1_low = live_bid - (8.0 if "BTC" in sym_str else 0.80)
     candle_3_high = live_bid - (2.0 if "BTC" in sym_str else 0.20)
-    
     if candle_1_low > candle_3_high:
         is_fvg_detected = True
 
@@ -103,7 +102,10 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     if is_fvg_detected:
         market_trend += " | FVG TARGET SPOTTED"
 
-    # 5. RSI Indicator calculation
+    # 5. Upgraded RSI Rule Bounds Assignment Loop (Safe clamped scaling)
+    rsi_ceil_limit = 65.0  # Tightened from 70.0 to insulate overbought reversal entries
+    rsi_floor_limit = 35.0 # Tightened from 30.0 to capture macro accumulator demand zones
+    
     last_deltas = [prices[i] - prices[i-1] for i in range(-14, 0)]
     gains = [d for d in last_deltas if d > 0]
     losses = [abs(d) for d in last_deltas if d < 0]
@@ -113,10 +115,10 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     
     rsi_status = "NEUTRAL"
     rsi_filter_block = False
-    if rsi >= 70.0:
+    if rsi >= rsi_ceil_limit:
         rsi_status = "OVERBOUGHT (HIGH RISK)"
         if "BUY" in active_direction: rsi_filter_block = True
-    elif rsi <= 30.0:
+    elif rsi <= rsi_floor_limit:
         rsi_status = "OVERSOLD (ACCUMULATION)"
         if "SELL" in active_direction: rsi_filter_block = True
 
@@ -128,16 +130,16 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     # 6. Position Tool Strategy Overlays Boundary Levels Rules
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
-        ob_zone = round(slow_ema - 5.0, 2)
-        stop_loss = round(ob_zone - 15.0, 2) if "BUY" in active_direction else round(ob_zone + 15.0, 2)
+        ob_base = round(slow_ema - 15.0, 2)
+        stop_loss = round(ob_base - 25.0, 2) if "BUY" in active_direction else round(ob_base + 25.0, 2)
     elif "EUR" in sym_str:
         entry_level = round(live_bid, 4)
-        ob_zone = round(slow_ema - 0.0001, 4)
-        stop_loss = round(ob_zone - 0.0005, 4) if "BUY" in active_direction else round(ob_zone + 0.0005, 4)
-    else: # Gold Defaults
+        ob_base = round(slow_ema - 0.0002, 4)
+        stop_loss = round(ob_base - 0.0006, 4) if "BUY" in active_direction else round(ob_base + 0.0006, 4)
+    else: # Gold Defaults ($4,389.20 reference zones)
         entry_level = round(live_bid, 2)
-        ob_zone = round(slow_ema - 0.20, 2)
-        stop_loss = round(ob_zone - 0.90, 2) if "BUY" in active_direction else round(ob_zone + 0.90, 2)
+        ob_base = round(slow_ema - 0.40, 2)
+        stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
         
     # 7. Active Execution Pipeline Monitoring Ledger Records
     if brain_active and not is_loss_cap_breached:
@@ -156,5 +158,5 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     return {
         "live_bid": live_bid, "live_ask": live_ask, "fast_ema": fast_ema, "slow_ema": slow_ema,
         "rsi": rsi, "market_trend": market_trend, "rsi_status": rsi_status, "rsi_filter_block": rsi_filter_block,
-        "entry_level": entry_level, "ob_zone": ob_zone, "stop_loss": stop_loss, "positions_matrix": positions_matrix
+        "entry_level": entry_level, "ob_zone": ob_base, "stop_loss": stop_loss, "positions_matrix": positions_matrix
     }
