@@ -86,7 +86,6 @@ else:
     risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=10.0, max_value=100000.0, value=161.53, step=10.0)
 
-    # 🏢 NEW FEATURE 1: FRONT-END LEVERAGE LOT MULTIPLIER SLIDER SELECTOR
     st.sidebar.markdown("---")
     st.sidebar.header("🎚️ Contract Leverage Protocol")
     lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
@@ -107,7 +106,7 @@ else:
             log_user_activity(operator_key_id, "EMERGENCY_HALT_TRIGGERED", "Administrative thread execution lock activated.")
             st.rerun()
 
-    # Calculations Processing Engine
+    # --- Run background processing calculations ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -152,3 +151,4 @@ else:
         if brain_data and "positions_matrix" in brain_data:
             positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
         else:
+            positions_dataframe = pd.DataFrame([{
