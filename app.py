@@ -111,7 +111,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- Run background processing calculations using selection string ---
+    # --- Run background processing calculations (Fixed Unpacking Typos) ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -145,7 +145,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Line Chart Layer - Axis fixed snugly to avoid flattening
+        # Native Line Chart Layer
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
@@ -153,3 +153,5 @@ else:
             "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
             "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
         })
+        st.line_chart(chart_data)
+
