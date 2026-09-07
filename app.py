@@ -61,7 +61,6 @@ if not st.session_state.logged_in:
 else:
     operator_real_name = st.session_state.user_database[st.session_state.username]["name"]
     
-    # Render connection management dashboard headers at root level
     st.markdown(f"<div style='float: right; color: #8892b0;'>Operator: {operator_real_name.upper()}</div>", unsafe_allow_html=True)
     if st.button("🔒 Sever Connection", type="secondary"):
         st.session_state.logged_in = False
@@ -106,12 +105,12 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- TOP WORKSPACE TAB SEPARATION FRAMEWORK MANAGER ---
+    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     symbol_default = "XAUUSDm"
     
-    # Safely fetch live metrics calculations
+    # Run calculation loops
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -130,7 +129,6 @@ else:
     # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
     # ==========================================
     with tab_desk:
-        # Analytics Metric Summary Header Row
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
@@ -145,7 +143,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Isolated Standalone Chart Generation Layer to bypass any parsing crashes
+        # Isolated Chart Block with proper exception formatting
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
         
@@ -160,3 +158,6 @@ else:
                 c_val = o_val + step
                 walk = c_val
                 
+                c_open.append(o_val)
+                c_close.append(c_val)
+                c_high.append(max(o_val, c_val) + 0.3)
