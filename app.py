@@ -121,6 +121,7 @@ else:
 
     symbol_default = "XAUUSDm"
     
+    # 🧠 Run calculation loops
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -135,9 +136,10 @@ else:
     max_allowable_spread = 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
-    # --- TAB 1: REAL-TIME LIVE DESK ---
+    # ==========================================
+    # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
+    # ==========================================
     with tab_desk:
-        # Live Pricing Metric Bar
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
         
@@ -154,7 +156,5 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {rsi_val:.2f}` | State Matrix Boundary: `[{rsi_status}]`")
 
-        # Live Candlestick Graph
+        # Live Candlestick Graph Block
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
-        
