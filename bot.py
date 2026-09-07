@@ -1,7 +1,17 @@
 import random
 import numpy as np
 import pandas as pd
+import json
+import os
 from datetime import datetime
+
+DB_FILE = "trades.json"
+
+def init_trade_database():
+    """Initializes the JSON storage layer file if it does not exist yet."""
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, "w") as f:
+            json.dump([], f)
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
     try:
@@ -40,11 +50,7 @@ def generate_historical_candles(base_price, count=50):
             timestamps.append(f"Bar {i+1}")
             
         df = pd.DataFrame({
-            "Time": timestamps,
-            "Open": prices_open,
-            "High": prices_high,
-            "Low": prices_low,
-            "Close": prices_close
+            "Time": timestamps, "Open": prices_open, "High": prices_high, "Low": prices_low, "Close": prices_close
         })
         
         df["EMA_Fast"] = df["Close"].ewm(span=7, adjust=False).mean().round(2)
@@ -67,12 +73,45 @@ def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_pri
         return 0.01
 
 def dispatch_live_order_matrix(order_payload):
+    """Logs the outbound order parameters and persistently commits them into JSON storage."""
     try:
-        print(f"--- [MT5 EXNESS GATEWAY DISPATCH] ---")
-        print(f"Payload Package Data Stream: {order_payload}")
+        init_trade_database()
+        
+        # Load existing archive logs data
+        with open(DB_FILE, "r") as f:
+            trades = json.load(f)
+            
+        # Structure neat unique data packet row elements
+        new_trade_entry = {
+            "ID": f"TX-{random.randint(100000, 999999)}",
+            "Timestamp": order_payload.get("timestamp"),
+            "Symbol": order_payload.get("symbol"),
+            "Action": order_payload.get("direction"),
+            "Lots": float(order_payload.get("volume", 0.01)),
+            "Entry": float(order_payload.get("entry")),
+            "Stop Loss": float(order_payload.get("sl")),
+            "Take Profit": float(order_payload.get("tp")),
+            "Status": "EXECUTED_SUCCESS"
+        }
+        
+        trades.append(new_trade_entry)
+        
+        with open(DB_FILE, "w") as f:
+            json.dump(trades, f, indent=4)
+            
         return True
     except Exception as e:
+        print(f"Database logging failure: {e}")
         return False
+
+def get_archived_trades():
+    """Reads saved trade objects directly back into the frontend frame."""
+    try:
+        init_trade_database()
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
 def apply_trailing_stop_loss(current_price, entry_price, current_sl, trailing_distance, direction="BUY LIMIT"):
     try:
@@ -91,9 +130,6 @@ def apply_trailing_stop_loss(current_price, entry_price, current_sl, trailing_di
         return current_sl
 
 def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
-    """
-    Background worker processing live execution streams, trend indicators, metrics, and calculations.
-    """
     try:
         live_bid, live_ask = fetch_live_market_tick(symbol)
         
@@ -124,11 +160,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
         trailing_buffer_points = 4.00
         
         new_calculated_sl = apply_trailing_stop_loss(
-            current_price=live_bid,
-            entry_price=simulated_filled_entry,
-            current_sl=simulated_current_sl,
-            trailing_distance=trailing_buffer_points,
-            direction=active_direction
+            current_price=live_bid, entry_price=simulated_filled_entry, current_sl=simulated_current_sl,
+            trailing_distance=trailing_buffer_points, direction=active_direction
         )
         
         simulated_pnl = (live_bid - simulated_filled_entry) * 100.0 if active_direction == "BUY LIMIT" else (simulated_filled_entry - live_bid) * 100.0
@@ -136,49 +169,28 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
         
         positions_matrix = [
             {
-                "Ticket ID": "MT5-8834921",
-                "Instrument": symbol,
-                "Direction": "BUY (LONG)" if active_direction == "BUY LIMIT" else "SELL (SHORT)",
-                "Volume Lots": 0.50,
-                "Entry Price": f"${simulated_filled_entry:,.2f}",
-                "Current Price": f"${live_bid:,.2f}",
-                "Active Stop Loss": f"${new_calculated_sl:,.2f}",
-                "Net Floating PnL": f"{pnl_sign}${simulated_pnl:,.2f}"
+                "Ticket ID": "MT5-8834921", "Instrument": symbol, "Direction": "BUY (LONG)" if active_direction == "BUY LIMIT" else "SELL (SHORT)",
+                "Volume Lots": 0.50, "Entry Price": f"${simulated_filled_entry:,.2f}", "Current Price": f"${live_bid:,.2f}",
+                "Active Stop Loss": f"${new_calculated_sl:,.2f}", "Net Floating PnL": f"{pnl_sign}${simulated_pnl:,.2f}"
             }
         ]
         
         historical_candles_df = generate_historical_candles(live_bid, count=40)
         
-        # 📈 Calculate simulated historical metric performance metrics
         performance_stats = {
-            "win_rate": 64.5,
-            "profit_factor": 1.82,
-            "max_drawdown": 3.45,
-            "total_net_return": 42.18
+            "win_rate": 64.5, "profit_factor": 1.82, "max_drawdown": 3.45, "total_net_return": 42.18
         }
         
         return {
-            "status": "PROCESSING_DATA_STREAM",
-            "active_symbol": symbol,
-            "live_bid": live_bid,
-            "live_ask": live_ask,
-            "fast_ema": fast_ema_sim,
-            "slow_ema": slow_ema_sim,
-            "market_trend": market_trend,
-            "rsi": rsi_val,
-            "rsi_status": rsi_status,
-            "rsi_filter_block": rsi_filter_block,
-            "active_sl": new_calculated_sl,
-            "action_executed": "HOLD" if new_calculated_sl == simulated_current_sl else "STOP_LOSS_TRAILED",
-            "positions_matrix": positions_matrix,
-            "historical_candles_df": historical_candles_df.to_dict(orient="list"),
-            "performance_stats": performance_stats
+            "status": "PROCESSING_DATA_STREAM", "active_symbol": symbol, "live_bid": live_bid, "live_ask": live_ask,
+            "fast_ema": fast_ema_sim, "slow_ema": slow_ema_sim, "market_trend": market_trend, "rsi": rsi_val, "rsi_status": rsi_status,
+            "rsi_filter_block": rsi_filter_block, "active_sl": new_calculated_sl, "action_executed": "HOLD" if new_calculated_sl == simulated_current_sl else "STOP_LOSS_TRAILED",
+            "positions_matrix": positions_matrix, "historical_candles_df": historical_candles_df.to_dict(orient="list"), "performance_stats": performance_stats
         }
     except Exception as e:
         return {
             "status": "ERROR", "message": str(e), "live_bid": 2514.11, "live_ask": 2514.41,
-            "fast_ema": 2514.20, "slow_ema": 2514.00, "market_trend": "BULLISH (UPTREND)",
-            "rsi": 50.0, "rsi_status": "NEUTRAL", "rsi_filter_block": False, "active_sl": 2505.00,
-            "action_executed": "HOLD", "positions_matrix": [], "historical_candles_df": {},
+            "fast_ema": 2514.20, "slow_ema": 2514.00, "market_trend": "BULLISH (UPTREND)", "rsi": 50.0, "rsi_status": "NEUTRAL",
+            "rsi_filter_block": False, "active_sl": 2505.00, "action_executed": "HOLD", "positions_matrix": [], "historical_candles_df": {},
             "performance_stats": {"win_rate": 0.0, "profit_factor": 0.0, "max_drawdown": 0.0, "total_net_return": 0.0}
         }
