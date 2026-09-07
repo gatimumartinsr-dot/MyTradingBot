@@ -174,5 +174,5 @@ with tab_desk:
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
-    # 🛠️ FIXED STRUCTURE INDENTATION MATRIX BLOCK
+    # Shaded Position Tool Area (Meticulously Indented)
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
