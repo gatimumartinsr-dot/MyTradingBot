@@ -145,7 +145,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Layout Tracker Card Layer
+        # Native Telemetry Status Display Block
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
@@ -154,4 +154,3 @@ else:
         tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
         tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
 
-        # Active Positions Panel Matrix Display
