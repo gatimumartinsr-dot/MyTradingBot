@@ -8,7 +8,7 @@ from bot import calculate_position_size, run_autonomous_brain, dispatch_live_ord
 # Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; } .stTabs [data-baseweb='tab-list'] { gap: 10px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; border-radius: 6px 6px 0px 0px !important; padding: 10px 20px !important; color: #8892b0 !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 20px !important; border-radius: 10px !important; border-left: 5px solid #00ff99 !important; } div.stAlert { background-color: #121620 !important; border: 1px solid #1f2433 !important; } .stButton>button { border-radius: 8px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
 
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
@@ -115,41 +115,43 @@ else:
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
 
-    # ⚡ PERMANENT RESOLUTION: Flattening data extraction keys down to the root level.
-    # This completely eliminates nested if/else statements within tab_desk, making indentation errors impossible.
-    matrix_raw_data = []
+    # --- 🖥️ SECTION 1: CORE TELEMETRY METRICS FEED ---
+    m_c1, m_c2, m_c3, m_c4 = st.columns(4)
+    risk_budget_dollars = (risk_percentage / 100.0) * account_balance
+    
+    m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
+    m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.2f}")
+    m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.2f}")
+    m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc", delta_color="normal")
+
+    if brain_data and "market_trend" in brain_data:
+        trend_label = brain_data["market_trend"]
+        trend_color = "green" if "BULLISH" in trend_label else "red"
+        st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
+        st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
+
+    # --- 🖥️ SECTION 2: REAL-TIME MOMENTUM SPREAD MONITOR ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f"## 🖥️ Real-Time Trading Desk Matrix")
+    st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
+    tc1, tc2, tc3 = st.columns(3)
+    tc1.metric("TRACKED INSTRUMENT", str(symbol_default))
+    tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
+    tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
+
+    # --- 🖥️ SECTION 3: ACTIVE OPEN POSITIONS LEDGER MATRIX ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 📋 Active Open Position Matrix")
+    
     if brain_data and "positions_matrix" in brain_data:
-        matrix_raw_data = brain_data["positions_matrix"]
+        positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
     else:
-        matrix_raw_data = [{
-            "Ticket ID": "Pending IDLE", 
-            "Instrument": str(symbol_default), 
-            "Direction": "IDLE", 
-            "Volume Lots": 0.00, 
-            "Entry Price": 0.00, 
-            "Current Price": 0.00, 
-            "TP Target": 0.00, 
-            "SL Target": 0.00, 
-            "Status Matrix": "AWAITING_TRIGGER", 
-            "Net Floating PnL": "$0.00"
-        }]
-    positions_dataframe = pd.DataFrame(matrix_raw_data)
+        positions_dataframe = pd.DataFrame([{
+            "Ticket ID": "Pending IDLE", "Instrument": str(symbol_default), "Direction": "IDLE", "Volume Lots": 0.00, 
+            "Entry Price": 0.00, "Current Price": 0.00, "TP Target": 0.00, "SL Target": 0.00, "Status Matrix": "AWAITING_TRIGGER", "Net Floating PnL": "$0.00"
+        }])
+    st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
-    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
-
-    # ==========================================
-    # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
-    # ==========================================
-    with tab_desk:
-        m_c1, m_c2, m_c3, m_c4 = st.columns(4)
-        risk_budget_dollars = (risk_percentage / 100.0) * account_balance
-        
-        m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
-        m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.2f}")
-        m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.2f}")
-        m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc", delta_color="normal")
-
-        if brain_data and "market_trend" in brain_data:
-            trend_label = brain_data["market_trend"]
-            trend_color = "green" if "BULLISH" in trend_label else "red"
-            st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
+    # --- 🖥️ SECTION 4: EXECUTION FORM & MARGIN RISK CALCULATOR ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 🔥 Order Entry Gateway Router")
