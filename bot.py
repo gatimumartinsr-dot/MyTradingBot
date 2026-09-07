@@ -1,8 +1,6 @@
 import random
-import numpy as np
-import pandas as pd
-import json
 import os
+import json
 
 DB_FILE = "trades.json"
 
@@ -24,48 +22,11 @@ def clear_trade_database():
 def fetch_live_market_tick(symbol="XAUUSDm"):
     try:
         base_bid = 2514.11 + random.uniform(-0.5, 0.5)
-        spread = round(random.uniform(0.15, 0.65), 2)
+        spread = round(random.uniform(0.15, 0.45), 2)
         base_ask = base_bid + spread
         return round(base_bid, 2), round(base_ask, 2)
     except Exception as e:
         return 2514.11, 2514.41
-
-def generate_historical_candles(base_price, count=50):
-    try:
-        np.random.seed(42)
-        prices_close = []
-        prices_open = []
-        prices_high = []
-        prices_low = []
-        timestamps = []
-        
-        current_close = base_price - 5.0
-        
-        for i in range(count):
-            move = np.random.uniform(-1.5, 2.0)
-            current_open = current_close
-            current_close = current_open + move
-            
-            candle_max = max(current_open, current_close)
-            candle_min = min(current_open, current_close)
-            current_high = candle_max + np.random.uniform(0.1, 0.8)
-            current_low = candle_min - np.random.uniform(0.1, 0.8)
-            
-            prices_open.append(round(current_open, 2))
-            prices_high.append(round(current_high, 2))
-            prices_low.append(round(current_low, 2))
-            prices_close.append(round(current_close, 2))
-            timestamps.append(f"Bar {i+1}")
-            
-        df = pd.DataFrame({
-            "Time": timestamps, "Open": prices_open, "High": prices_high, "Low": prices_low, "Close": prices_close
-        })
-        
-        df["EMA_Fast"] = df["Close"].ewm(span=7, adjust=False).mean().round(2)
-        df["EMA_Slow"] = df["Close"].ewm(span=14, adjust=False).mean().round(2)
-        return df
-    except Exception as e:
-        return pd.DataFrame()
 
 def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_price):
     try:
@@ -147,13 +108,13 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
         rsi_filter_block = False
         
         if rsi_val >= 70.0:
-            rsi_status = "OVERBOUGHT (HIGH REVERSAL RISK)"
+            rsi_status = "OVERBOUGHT (HIGH RISK)"
             if active_direction == "BUY LIMIT": rsi_filter_block = True
         elif rsi_val <= 30.0:
-            rsi_status = "OVERSOLD (BOTTOM ACCUMULATION)"
+            rsi_status = "OVERSOLD (ACCUMULATION)"
             if active_direction == "SELL LIMIT": rsi_filter_block = True
         else:
-            rsi_status = "NEUTRAL (BALANCED MOMENTUM)"
+            rsi_status = "NEUTRAL (BALANCED)"
 
         simulated_filled_entry = 2510.00
         simulated_current_sl = 2505.00 if active_direction == "BUY LIMIT" else 2520.00
@@ -175,22 +136,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
             }
         ]
         
-        historical_candles_df = generate_historical_candles(live_bid, count=40)
-        
-        performance_stats = {
-            "win_rate": 64.5, "profit_factor": 1.82, "max_drawdown": 3.45, "total_net_return": 42.18
-        }
-        
         return {
-            "status": "PROCESSING_DATA_STREAM", "active_symbol": symbol, "live_bid": live_bid, "live_ask": live_ask,
+            "status": "PROCESSING", "active_symbol": symbol, "live_bid": live_bid, "live_ask": live_ask,
             "fast_ema": fast_ema_sim, "slow_ema": slow_ema_sim, "market_trend": market_trend, "rsi": rsi_val, "rsi_status": rsi_status,
             "rsi_filter_block": rsi_filter_block, "active_sl": new_calculated_sl, "action_executed": "HOLD" if new_calculated_sl == simulated_current_sl else "STOP_LOSS_TRAILED",
-            "positions_matrix": positions_matrix, "historical_candles_df": historical_candles_df.to_dict(orient="list"), "performance_stats": performance_stats
+            "positions_matrix": positions_matrix
         }
     except Exception as e:
         return {
             "status": "ERROR", "message": str(e), "live_bid": 2514.11, "live_ask": 2514.41,
             "fast_ema": 2514.20, "slow_ema": 2514.00, "market_trend": "BULLISH (UPTREND)", "rsi": 50.0, "rsi_status": "NEUTRAL",
-            "rsi_filter_block": False, "active_sl": 2505.00, "action_executed": "HOLD", "positions_matrix": [], "historical_candles_df": {},
-            "performance_stats": {"win_rate": 0.0, "profit_factor": 0.0, "max_drawdown": 0.0, "total_net_return": 0.0}
+            "rsi_filter_block": False, "active_sl": 2505.00, "action_executed": "HOLD", "positions_matrix": []
         }
