@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 from datetime import datetime
 from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades, clear_trade_database
 
@@ -143,22 +142,17 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Front-End Chart Generator Layer
+        # Native Native Line Chart Layer
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
+        st.markdown("### 📊 Real-Time Matrix Market Trend Monitor (XAUUSDm)")
         
-        c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
-        walk = live_bid - 3.0
-        
-        for idx in range(30):
-            movement = (idx * 0.12) + (live_bid % 3)
-            o_val = walk
-            c_val = o_val + (0.5 if idx % 2 == 0 else -0.4)
-            walk = c_val
-            
-            c_open.append(o_val)
-            c_close.append(c_val)
-            c_high.append(max(o_val, c_val) + 0.3)
-            c_low.append(min(o_val, c_val) - 0.3)
-            c_time.append(f"T-{30-idx}")
-            
+        chart_data = pd.DataFrame({
+            "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
+            "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
+        })
+        st.line_chart(chart_data)
+
+        # Active Positions Panel Matrix Display
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### 📋 Active Open Position Matrix")
+        positions_dataframe = pd.DataFrame(brain_data.get("positions_matrix") if brain_data else [
