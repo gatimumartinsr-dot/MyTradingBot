@@ -3,16 +3,18 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-import time
+import time  # 🌟 RESTORED: Critical background module preventing UI initialization
+import random
 import bot 
 
 # Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# --- REMOVED ALL STYLESHEET OVERRIDES TO PREVENT VIEWPORT HIDING BUGS ---
-
-if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
-if "brain_active" not in st.session_state: st.session_state.brain_active = False
+# Initialize persistent session states to keep variables anchored across tab changes
+if "gateway_connected" not in st.session_state: 
+    st.session_state.gateway_connected = False
+if "brain_active" not in st.session_state: 
+    st.session_state.brain_active = False
 
 # ==========================================
 # --- 🏢 SIDEBAR PANEL CONTROL MATRIX ----
@@ -27,7 +29,7 @@ broker_id = st.sidebar.number_input("Account Login ID Number", value=474239881, 
 broker_pass = st.sidebar.text_input("Trading Access Password", type="password", value="Pu,24ppy")
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value="Exness-MT5-Trial15")
 
-if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", width="stretch"):
+if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
     st.session_state.gateway_connected = True
     st.sidebar.success("Gateway linked successfully to cloud router nodes!")
 
@@ -40,13 +42,14 @@ account_balance = st.sidebar.number_input("Target Account Balance ($)", value=16
 st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
 if not st.session_state.brain_active:
-    if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", width="stretch"):
-        if not st.session_state.gateway_connected: st.sidebar.error("Authorize live broker handshake first!")
+    if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
+        if not st.session_state.gateway_connected: 
+            st.sidebar.error("Authorize live broker handshake first!")
         else:
             st.session_state.brain_active = True
             st.rerun()
 else:
-    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", width="stretch"):
+    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
         st.session_state.brain_active = False
         st.rerun()
 
@@ -77,7 +80,7 @@ st.title("🟢 Helix OB — Institutional Matrix Workspace")
 st.caption("Consolidated Multi-Asset Algorithmic Pipeline Control Room")
 st.markdown("---")
 
-# Permanent layout core metrics block
+# Permanent layout core metrics block (Guaranteed to render first)
 m_c1, m_c2, m_c3, m_c4 = st.columns(4)
 m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
 m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
@@ -85,6 +88,9 @@ m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_
 risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Main Navigation Workspace
 tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
 # ==========================================
@@ -107,7 +113,10 @@ with tab_desk:
     if st.session_state.brain_active:
         multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
         base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 4413.26)
-        upl_val = round((live_bid - base_entry) * multiplier, 2) if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else round((base_entry - live_ask) * multiplier, 2)
+        if "BULLISH" in brain_data["market_trend"] or "BUY" in brain_data["market_trend"]:
+            upl_val = round((live_bid - base_entry) * multiplier, 2)
+        else:
+            upl_val = round((base_entry - live_ask) * multiplier, 2)
             
     upl_delta = "Exposure Idle" if not st.session_state.brain_active else ("Floating Profit" if upl_val >= 0 else "Floating Drawdown")
     tc4.metric("UNREALIZED FLOATING P&L", f"${upl_val:+,.2f}", delta=upl_delta, delta_color="normal" if st.session_state.brain_active else "off")
@@ -170,10 +179,9 @@ with tab_desk:
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
+    # Blockless safe layout configurations
     is_bullish_state = ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"])
     green_zone_y0 = brain_data["entry_level"] if is_bullish_state else brain_data["take_profit"]
     green_zone_y1 = brain_data["take_profit"] if is_bullish_state else brain_data["entry_level"]
     red_zone_y0 = brain_data["stop_loss"] if is_bullish_state else brain_data["entry_level"]
-    red_zone_y1 = brain_data["entry_level"] if is_bullish_state else brain_data["stop_loss"]
 
-    fig.add_shape(type="rect", x0="M-3", x1="Live", y0=green_zone_y0, y1=green_zone_y1, fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
