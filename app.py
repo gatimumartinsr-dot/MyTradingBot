@@ -107,11 +107,7 @@ with tab_desk:
     if st.session_state.brain_active:
         multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
         base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 4413.26)
-        
-        if "BULLISH" in brain_data["market_trend"]:
-            upl_val = round((live_bid - base_entry) * multiplier, 2)
-        else:
-            upl_val = round((base_entry - live_ask) * multiplier, 2)
+        upl_val = round((live_bid - base_entry) * multiplier, 2) if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else round((base_entry - live_ask) * multiplier, 2)
             
     upl_delta = "Exposure Idle" if not st.session_state.brain_active else ("Floating Profit" if upl_val >= 0 else "Floating Drawdown")
     tc4.metric("UNREALIZED FLOATING P&L", f"${upl_val:+,.2f}", delta=upl_delta, delta_color="normal" if st.session_state.brain_active else "off")
@@ -142,14 +138,14 @@ with tab_desk:
     )])
     
     # Visual Execution Signals Overlay Filter
-    sig_text = "🟢 HELIX AUTONOMOUS BUY" if "BULLISH" in brain_data["market_trend"] else "🔴 HELIX AUTONOMOUS SELL"
-    sig_color = "#00ff99" if "BULLISH" in brain_data["market_trend"] else "#ff3366"
-    sig_y = min(c_low) - (scale * 1.5) if "BULLISH" in brain_data["market_trend"] else max(c_high) + (scale * 1.5)
+    sig_text = "🟢 HELIX AUTONOMOUS BUY" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "🔴 HELIX AUTONOMOUS SELL"
+    sig_color = "#00ff99" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "#ff3366"
+    sig_y = min(c_low) - (scale * 1.5) if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else max(c_high) + (scale * 1.5)
     
     fig.add_trace(go.Scatter(
         x=["M-15"], y=[sig_y], mode="markers+text",
-        marker=dict(symbol="triangle-up" if "BULLISH" in brain_data["market_trend"] else "triangle-down", size=14, color=sig_color),
-        text=[sig_text], textposition="bottom center" if "BULLISH" in brain_data["market_trend"] else "top center",
+        marker=dict(symbol="triangle-up" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "triangle-down", size=14, color=sig_color),
+        text=[sig_text], textposition="bottom center" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "top center",
         textfont=dict(family="Courier New", size=11, color=sig_color),
         name="Algorithmic Execution Signal Node"
     ))
@@ -172,7 +168,3 @@ with tab_desk:
     
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
-    fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
-
-    # Shaded Position Tool Area (Meticulously Indented)
-    if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
