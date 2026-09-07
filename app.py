@@ -102,7 +102,7 @@ with tab_desk:
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
     
-    # 📈 LOCAL uP&L CALCULATION LOGIC TO OVERRIDE THE SERVER CACHE
+    # uP&L Matrix
     upl_val = 0.00
     if st.session_state.brain_active:
         multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
@@ -119,11 +119,12 @@ with tab_desk:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     
-    # Generate candlestick data safely
-    np.random.seed(42)
+    # 🌟 FIX: Dynamic time seed tracks millisecond updates for moving candlestick ranges
+    np.random.seed(int(time.time() * 1000) % 2**32)
     c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
     walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
     scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 0.8)
+    
     for i in range(30):
         step = np.random.uniform(-scale, scale * 1.04)
         o_val = walk
