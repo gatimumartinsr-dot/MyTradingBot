@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-import bot  # Import as module to avoid function cache locks
+import bot 
 
 # Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -57,13 +57,13 @@ else:
         st.session_state.brain_active = False
         st.rerun()
 
-# Run processing calculations from bot.py safely matching signature limits
+# 🌟 THE CORRECTION: Parameters packed dynamically into an unstructured argument payload
 brain_data = bot.run_autonomous_brain(
-    account_balance=account_balance, 
-    risk_percentage=risk_percentage, 
-    symbol_choice=symbol_choice, 
-    brain_active=st.session_state.brain_active, 
-    tp_ratio=tp_ratio
+    account_balance, 
+    risk_percentage, 
+    symbol_choice, 
+    st.session_state.brain_active,
+    tp_ratio # Passed sequentially to work regardless of keyword definitions
 )
 
 live_bid = brain_data["live_bid"]
@@ -174,3 +174,4 @@ with tab_journal:
         st.rerun()
 
 # ==========================================
+# --- TAB 3: SYSTEM CHECK RULES AUDIT ------
