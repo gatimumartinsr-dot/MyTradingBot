@@ -13,10 +13,20 @@ def init_trade_database():
         with open(DB_FILE, "w") as f:
             json.dump([], f)
 
+def clear_trade_database():
+    """Completely wipes out all historical entries inside the database layer."""
+    try:
+        with open(DB_FILE, "w") as f:
+            json.dump([], f)
+        return True
+    except Exception:
+        return False
+
 def fetch_live_market_tick(symbol="XAUUSDm"):
     try:
         base_bid = 2514.11 + random.uniform(-0.5, 0.5)
-        spread = 0.30
+        # Adding a dynamic spread factor to test our new guardrail rules
+        spread = round(random.uniform(0.15, 0.65), 2)
         base_ask = base_bid + spread
         return round(base_bid, 2), round(base_ask, 2)
     except Exception as e:
@@ -73,15 +83,11 @@ def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_pri
         return 0.01
 
 def dispatch_live_order_matrix(order_payload):
-    """Logs the outbound order parameters and persistently commits them into JSON storage."""
     try:
         init_trade_database()
-        
-        # Load existing archive logs data
         with open(DB_FILE, "r") as f:
             trades = json.load(f)
             
-        # Structure neat unique data packet row elements
         new_trade_entry = {
             "ID": f"TX-{random.randint(100000, 999999)}",
             "Timestamp": order_payload.get("timestamp"),
@@ -95,17 +101,13 @@ def dispatch_live_order_matrix(order_payload):
         }
         
         trades.append(new_trade_entry)
-        
         with open(DB_FILE, "w") as f:
             json.dump(trades, f, indent=4)
-            
         return True
     except Exception as e:
-        print(f"Database logging failure: {e}")
         return False
 
 def get_archived_trades():
-    """Reads saved trade objects directly back into the frontend frame."""
     try:
         init_trade_database()
         with open(DB_FILE, "r") as f:
