@@ -156,6 +156,5 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🔥 Order Ticket Parameters")
         
-        # Row 1 Flat Configuration Layer
         asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
-        
+        suggested_dir_idx = 0
