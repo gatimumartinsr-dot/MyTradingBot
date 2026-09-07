@@ -154,7 +154,7 @@ with tab_desk:
     st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
     if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
 
-    # ⚡ FIXED DISPATCH LOOP: Properly indented processing script variables under button click event
+    # ⚡ PERMANENT SYNTAX FIX: Isolated parameters inside a flat data packet payload object before transmission
     if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
-        dispatch_live_order_matrix({
+        payload_packet = {
             "symbol": str(symbol_choice),
