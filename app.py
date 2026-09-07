@@ -143,11 +143,15 @@ else:
         m_c3.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
         m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
 
-        # 📈 Active Trend Context Callout Box
+        # 📈 Active Trend & RSI Momentum Engine Callout Box
         if brain_data and "market_trend" in brain_data:
             trend_label = brain_data["market_trend"]
             trend_color = "green" if "BULLISH" in trend_label else "red"
-            st.markdown(f"**Current Structural Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
+            rsi_val = brain_data.get("rsi", 50.0)
+            rsi_status = brain_data.get("rsi_status", "NEUTRAL")
+            
+            st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
+            st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {rsi_val:.2f}` | State Matrix Boundary: `[{rsi_status}]`")
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🔥 Order Ticket Parameters")
@@ -155,7 +159,3 @@ else:
         # Row 1 Flat Configuration Layer
         asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
         
-        suggested_dir_idx = 0
-        if brain_data and brain_data.get("market_trend") == "BEARISH (DOWNTREND)":
-            suggested_dir_idx = 1
-            
