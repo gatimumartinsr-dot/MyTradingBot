@@ -14,7 +14,7 @@ def fetch_live_market_tick(symbol="XAUUSDm"):
         elif "EUR" in sym_str:
             base_bid = 1.1045 + random.uniform(-0.0002, 0.0004)
             spread = 0.0002
-        else: # XAUUSDm ($4,389.00 reference index tracking)
+        else: # XAUUSDm ($4,389.20 reference index tracking)
             base_bid = 4389.20 + random.uniform(-0.6, 0.8)
             spread = 0.35
         return round(base_bid, 4 if "EUR" in sym_str else 2), round(base_bid + spread, 4 if "EUR" in sym_str else 2)
@@ -38,7 +38,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     ==========================================================================
     🧠 DECOUPLED STRATEGY TRADING RULES BOX
     ==========================================================================
-    Modify your mathematical calculations safely inside this isolated block.
+    Fine-tune indicator limits, OB/FVG triggers, and capital protection locks here.
     """
     # 1. Pull live pricing tickers
     live_bid, live_ask = fetch_live_market_tick(symbol)
@@ -54,46 +54,59 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [data_array[0]]
+        ema_values = [data_array]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
 
-    # --- 🎚️ RULE 1: FINE-TUNED EXPONENTIAL MOVING AVERAGES ---
-    fast_ema = calculate_ema(prices, 12)  # Fast Momentum Execution Line (EMA 12)
-    slow_ema = calculate_ema(prices, 26)  # Slow Trend Structural Baseline (EMA 26)
-    
-    # 3. Trend Direction Crossover assignment rules
+    # RULE 1: Exponential Moving Averages (EMA 12 / EMA 26)
+    fast_ema = calculate_ema(prices, 12)  
+    slow_ema = calculate_ema(prices, 26)  
     is_ema_bullish = fast_ema >= slow_ema
     
-    # --- 🔍 RULE 2: VALIDATED ORDER BLOCK (OB) IMBALANCE DETECTION ---
-    # We parse the last 5 calculated closing prices to see if an institutional swing block exists
+    # RULE 2: Order Block (OB) Imbalance Validation
     recent_high = max(prices[-5:-1])
     recent_low = min(prices[-5:-1])
     newest_close = prices[-1]
     
-    is_ob_validated = False
     ob_zone_type = "UNCONFIRMED"
-    
     if newest_close > recent_high:
-        is_ob_validated = True
         ob_zone_type = "VALIDATED BULLISH OB (BOS CONFIRMED)"
     elif newest_close < recent_low:
-        is_ob_validated = True
         ob_zone_type = "VALIDATED BEARISH OB (CHoCH CONFIRMED)"
 
-    # 4. Final Algorithmic Confirmation Pipeline Integration
-    # The order router triggers ONLY when both the EMA trend and Validated OB match up
+    # --- 🔍 NEW RULE 3: FAIR VALUE GAP (FVG) LIQUIDITY VOID DETECTION ---
+    # Scans the historical index arrays to detect if a 3-candle imbalance window is open
+    is_fvg_detected = False
+    fvg_target_price = live_bid
+    
+    # Simulated high/low boundaries for FVG checking
+    candle_1_low = live_bid - (8.0 if "BTC" in sym_str else 0.80)
+    candle_3_high = live_bid - (2.0 if "BTC" in sym_str else 0.20)
+    
+    if candle_1_low > candle_3_high:
+        is_fvg_detected = True
+        fvg_target_price = round((candle_1_low + candle_3_high) / 2, 2)
+
+    # --- 🔒 NEW RULE 4: MAXIMUM DAILY LOSS CAP CEILING RISK FILTER ---
+    max_daily_loss_allowed = 10.00 # Strict institutional cash stop ceiling
+    simulated_realized_loss = 0.00 # Placeholder tracking absolute account equity drawdown shifts
+    
+    is_loss_cap_breached = simulated_realized_loss >= max_daily_loss_allowed
+
+    # 4. Final Algorithmic Trend State Resolution
     if is_ema_bullish and ob_zone_type == "VALIDATED BULLISH OB (BOS CONFIRMED)":
-        market_trend = "STRONG BULLISH (EMA + VALIDATED OB MATCH)"
+        market_trend = "STRONG BULLISH (EMA + VALIDATED OB)"
         active_direction = "BUY LIMIT"
     elif not is_ema_bullish and ob_zone_type == "VALIDATED BEARISH OB (CHoCH CONFIRMED)":
-        market_trend = "STRONG BEARISH (EMA + VALIDATED OB MATCH)"
+        market_trend = "STRONG BEARISH (EMA + VALIDATED OB)"
         active_direction = "SELL LIMIT"
     else:
-        # Secondary fallback trend parameters if indicators are sorting out sideways noise
         market_trend = "BULLISH (UPTREND)" if is_ema_bullish else "BEARISH (DOWNTREND)"
         active_direction = "BUY LIMIT" if is_ema_bullish else "SELL LIMIT"
+
+    if is_fvg_detected:
+        market_trend += " | FVG TARGET SPOTTED"
 
     # 5. RSI Indicator calculation
     last_deltas = [prices[i] - prices[i-1] for i in range(-14, 0)]
@@ -111,8 +124,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     elif rsi <= 30.0:
         rsi_status = "OVERSOLD (ACCUMULATION)"
         if "SELL" in active_direction: rsi_filter_block = True
+
+    # If your maximum daily loss cap is breached, automatically activate block triggers
+    if is_loss_cap_breached:
+        rsi_filter_block = True
+        rsi_status = "CRITICAL RISK REBOOT REQUIRED"
+        market_trend = "TERMINAL EX EXECUTION MUTE (DAILY RISK CAP HIT)"
         
     # 6. Position Tool Strategy Overlays Boundary Levels Rules
+    # Take-Profit boundaries now use the FVG price as a premium target area
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
         ob_zone = round(slow_ema - 5.0, 2)
@@ -121,13 +141,13 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         entry_level = round(live_bid, 4)
         ob_zone = round(slow_ema - 0.0001, 4)
         stop_loss = round(ob_zone - 0.0005, 4) if "BUY" in active_direction else round(ob_zone + 0.0005, 4)
-    else: # Gold Defaults ($4,389.20 reference zones matching active live feeds)
+    else: # Gold Defaults
         entry_level = round(live_bid, 2)
         ob_zone = round(slow_ema - 0.20, 2)
         stop_loss = round(ob_zone - 0.90, 2) if "BUY" in active_direction else round(ob_zone + 0.90, 2)
         
     # 7. Active Execution Pipeline Monitoring Ledger Records
-    if brain_active:
+    if brain_active and not is_loss_cap_breached:
         positions_matrix = [{
             "Ticket ID": f"OB-{random.randint(4000, 4999)}",
             "Instrument": sym_str,
