@@ -152,7 +152,8 @@ else:
         })
         st.line_chart(chart_data)
 
-        # Active Positions Panel Matrix Display
+        # Active Positions Panel Matrix Display (Bracket logic fixed and closed)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📋 Active Open Position Matrix")
-        positions_dataframe = pd.DataFrame(brain_data.get("positions_matrix") if brain_data else [
+        
+        if brain_data and "positions_matrix" in brain_data:
