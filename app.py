@@ -109,7 +109,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- Run background processing calculations ---
+    # --- Run background processing calculations dynamically mapping selection strings ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -143,12 +143,12 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # ⚡ FIXED VISUALIZATION LAYER: Replaced string layout format with clean, native Streamlit layout objects
+        # Native Telemetry Status Information Display Block
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
         tc1, tc2, tc3 = st.columns(3)
         tc1.metric("TRACKED INSTRUMENT", str(symbol_default))
-        tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Pips")
-        tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSSIVE")
+        tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
+        tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
 
