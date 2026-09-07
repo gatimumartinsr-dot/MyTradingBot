@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades
+from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades, clear_trade_database
 
 # Core configuration setup for an elite institutional desk execution view
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -63,7 +63,7 @@ else:
     
     if st.session_state.brain_active:
         brain_status_color = "#00ff99"
-        brain_status_label = "● AUTONOMOUS COGNITIVE BRAIN ACTIVE"
+        brain_status_label = "● AUTONOMOUS COBRAIN ACTIVE"
     elif st.session_state.gateway_connected:
         brain_status_color = "#00ffff"
         brain_status_label = "● MT5 HANDSHAKE AUTHENTICATED"
@@ -131,6 +131,11 @@ else:
         if not live_bid: live_bid = 2514.11
         if not live_ask: live_ask = 2514.41
 
+    # Compute Active Live Spread
+    active_spread_points = round(abs(live_ask - live_bid), 2)
+    max_allowable_spread = 0.50
+    is_spread_breached = active_spread_points > max_allowable_spread
+
     with tab_desk:
         m_c1, m_c2, m_c3, m_c4 = st.columns(4)
         risk_budget_dollars = (risk_percentage / 100.0) * account_balance
@@ -150,6 +155,3 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📈 Algorithmic Performance Metrics Ledger")
-        p_stats = brain_data.get("performance_stats") if brain_data else {"win_rate": 64.5, "profit_factor": 1.82, "max_drawdown": 3.45, "total_net_return": 42.18}
-        s_c1, s_c2, s_c3, s_c4 = st.columns(4)
-        s_c1.metric(label="STRATEGY WIN RATE", value=f"{p_stats['win_rate']}%")
