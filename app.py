@@ -20,7 +20,7 @@ st.sidebar.header("🔀 Active Market Ticker")
 symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
 
 st.sidebar.markdown("---")
-st.sidebar.header("🏢 Multi-Broker Node Gateway")
+st.sidebar.header("🏢 Multi-Broker Gateway Key")
 broker_name = st.sidebar.text_input("Broker Endpoint Name", value="Exness Global")
 broker_id = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
 broker_pass = st.sidebar.text_input("Trading Access Password", type="password", value="Pu,24ppy")
@@ -108,7 +108,6 @@ with tab_desk:
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
-    # ⚡ UNBREAKABLE FIX: Standardized native label text formats to avoid tab-switching crashes
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
         paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
@@ -145,7 +144,7 @@ with tab_desk:
     positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
     st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
-    # Manual input box routing panel
+    # Manual input routing gateway panel
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🔥 Order Entry Gateway Router")
     o_c1, o_c2 = st.columns(2)
@@ -155,5 +154,7 @@ with tab_desk:
     st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
     if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
 
+    # ⚡ FIXED DISPATCH LOOP: Properly indented processing script variables under button click event
     if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
-        # Dispatches live parameters straight to persistent history database registries
+        dispatch_live_order_matrix({
+            "symbol": str(symbol_choice),
