@@ -87,7 +87,7 @@ with tab_desk:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     
-    # Generate candlestick timeline arrays snugly bound around live session feed baselines
+    # Generate candlestick timeline values safely
     np.random.seed(42)
     c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
     walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
@@ -101,23 +101,23 @@ with tab_desk:
         c_close.append(c_val)
         c_high.append(max(o_val, c_val) + (scale * 0.3))
         c_low.append(min(o_val, c_val) - (scale * 0.3))
-        c_time.append(i)
+        c_time.append(f"M-{30-i}" if i < 29 else "Live")
         
     fig = go.Figure(data=[go.Candlestick(
         x=c_time, open=c_open, high=c_high, low=c_low, close=c_close,
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
-    # Premium Typography & Standard Professional Custom Layout Parameters
+    # ⚡ UNBREAKABLE FIX: Standardized native label text formats to avoid tab-switching crashes
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
         paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
         margin=dict(l=10, r=10, t=15, b=10),
-        xaxis=dict(showgrid=True, gridcolor='#1f2433', tickmode='array', tickvals=[0, 10, 20, 29], ticktext=['M-30', 'M-20', 'M-10', 'Live'], tickfont=dict(family="Arial")),
+        xaxis=dict(showgrid=True, gridcolor='#1f2433', type='category'),
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    # 🟦 FIXED RECTANGULAR ORDER BLOCK (OB) SHAPE INJECTION
+    # Rectangular Order Block Shape Overlay
     ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
@@ -126,43 +126,26 @@ with tab_desk:
         annotation_font=dict(size=9, color="#ffaa00", family="Courier New")
     )
     
-    # Precise strategy level horizontal line markers
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
 
-    # 🟩 FIXED POSITION TOOL: Using 'add_shape(type="rect")' to cleanly limit shading to the order execution window
+    # Shaded Position Tool Area constrained exclusively to the execution block window (Final elements on x-axis timeline)
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-        # Long target box
-        fig.add_shape(
-            type="rect", x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5),
-            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0
-        )
-        # Long risk box
-        fig.add_shape(
-            type="rect", x0=26, x1=29, y0=brain_data["stop_loss"], y1=brain_data["entry_level"],
-            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0
-        )
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5), fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
     else:
-        # Short target box
-        fig.add_shape(
-            type="rect", x0=26, x1=29, y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"],
-            fillcolor="rgba(0, 255, 153, 0.15)", line_width=0
-        )
-        # Short risk box
-        fig.add_shape(
-            type="rect", x0=26, x1=29, y0=brain_data["entry_level"], y1=brain_data["stop_loss"],
-            fillcolor="rgba(255, 51, 102, 0.15)", line_width=0
-        )
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Active positions matrix
+    # Active running positions matrix table
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Active Open Position Matrix")
     positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
     st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
-    # Manual input routing gateway
+    # Manual input box routing panel
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🔥 Order Entry Gateway Router")
     o_c1, o_c2 = st.columns(2)
@@ -170,3 +153,7 @@ with tab_desk:
     entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
     calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
     st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
+    if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
+
+    if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
+        # Dispatches live parameters straight to persistent history database registries
