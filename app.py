@@ -122,7 +122,7 @@ else:
 
     symbol_default = "XAUUSDm"
     
-    # 🧠 Dynamic Telemetry Brain Router 
+    # Dynamic Telemetry Brain Router 
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -143,7 +143,7 @@ else:
         m_c3.metric(label="LIVE ASK PRICE FEED", value=f"${live_ask:,.2f}")
         m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_budget_dollars:,.2f}", delta=f"{risk_percentage}% Alloc Base", delta_color="normal")
 
-        # 📈 Active Trend & RSI Momentum Engine Callout Box
+        # Active Trend & RSI Momentum Engine Callout Box
         if brain_data and "market_trend" in brain_data:
             trend_label = brain_data["market_trend"]
             trend_color = "green" if "BULLISH" in trend_label else "red"
@@ -153,8 +153,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {rsi_val:.2f}` | State Matrix Boundary: `[{rsi_status}]`")
 
+        # --- 📊 LIVE STRATEGY PERFORMANCE STATISTICS PANEL ---
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### 🔥 Order Ticket Parameters")
+        st.markdown("### 📈 Algorithmic Performance Metrics Ledger")
         
-        asset_suffix = st.text_input("Asset Instrument Symbol Suffix", value=symbol_default)
-        suggested_dir_idx = 0
