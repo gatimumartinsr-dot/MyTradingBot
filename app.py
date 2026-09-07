@@ -9,8 +9,7 @@ import bot
 # Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# FIXED CSS Matrix: Style layout elements cleanly without breaking Streamlit tab viewport layers
-st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; }</style>", unsafe_allow_html=True)
+# --- REMOVED ALL STYLESHEET OVERRIDES TO PREVENT VIEWPORT HIDING BUGS ---
 
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
@@ -171,6 +170,10 @@ with tab_desk:
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
-    # Blockless shape parameters engine
     is_bullish_state = ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"])
     green_zone_y0 = brain_data["entry_level"] if is_bullish_state else brain_data["take_profit"]
+    green_zone_y1 = brain_data["take_profit"] if is_bullish_state else brain_data["entry_level"]
+    red_zone_y0 = brain_data["stop_loss"] if is_bullish_state else brain_data["entry_level"]
+    red_zone_y1 = brain_data["entry_level"] if is_bullish_state else brain_data["stop_loss"]
+
+    fig.add_shape(type="rect", x0="M-3", x1="Live", y0=green_zone_y0, y1=green_zone_y1, fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
