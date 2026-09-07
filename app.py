@@ -91,7 +91,7 @@ else:
     account_balance = st.sidebar.number_input("Target Account Balance ($)", min_value=10.0, max_value=100000.0, value=161.53, step=10.0)
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🧠 Autonomous Hands-Hands Mode")
+    st.sidebar.header("🧠 Autonomous Hands-Free Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE AUTONOMOUS BRAIN", type="primary", use_container_width=True):
             if not st.session_state.gateway_connected:
@@ -104,16 +104,13 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
-    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
-
-    # 🏢 NEW FEATURE: FRONT-END GLOBAL CURRENCY INSTRUMENT PICKER
+    # --- SIDEBAR INSTRUMENT PICKER ---
     st.sidebar.markdown("---")
     st.sidebar.header("🔀 Active Market Selector")
-    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm (Gold Ounce)", "BTCUSDm (Bitcoin Crypto)", "EURUSDm (Euro FX Spot)"])
-    symbol_default = symbol_choice.split(" ")[0]
+    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
+    symbol_default = str(symbol_choice).strip()
 
-    # Run calculation loops passing chosen symbol dynamically
+    # Run calculation loops passing clean string symbol configuration
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -125,6 +122,9 @@ else:
     active_spread_points = round(abs(live_ask - live_bid), 4)
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
+
+    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
+    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     # ==========================================
     # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
@@ -154,3 +154,4 @@ else:
         })
         st.line_chart(chart_data)
 
+        # Active Positions Panel Matrix Display
