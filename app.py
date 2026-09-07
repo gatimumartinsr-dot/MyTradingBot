@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
+import time
 import bot 
 
 # Core terminal view settings
@@ -26,7 +27,6 @@ broker_id = st.sidebar.number_input("Account Login ID Number", value=474239881, 
 broker_pass = st.sidebar.text_input("Trading Access Password", type="password", value="Pu,24ppy")
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value="Exness-MT5-Trial15")
 
-# FIX: Layout update optimized using width="stretch"
 if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", width="stretch"):
     st.session_state.gateway_connected = True
     st.sidebar.success("Gateway linked successfully to cloud router nodes!")
@@ -40,20 +40,17 @@ account_balance = st.sidebar.number_input("Target Account Balance ($)", value=16
 st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
 if not st.session_state.brain_active:
-    # FIX: Layout update optimized using width="stretch"
     if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", width="stretch"):
         if not st.session_state.gateway_connected: st.sidebar.error("Authorize live broker handshake first!")
         else:
             st.session_state.brain_active = True
             st.rerun()
 else:
-    # FIX: Layout update optimized using width="stretch"
     if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", width="stretch"):
         st.session_state.brain_active = False
         st.rerun()
 
 # 🛡️ SAFE CALCULATION EXTRAPOLATION MATRIX
-# Passes only 4 positional elements to support older cache definitions
 brain_data = bot.run_autonomous_brain(
     account_balance, 
     risk_percentage, 
@@ -61,7 +58,6 @@ brain_data = bot.run_autonomous_brain(
     st.session_state.brain_active
 )
 
-# Overrides Take Profit level using local runtime variables to bypass file system conflicts
 entry_level = brain_data["entry_level"]
 stop_loss = brain_data["stop_loss"]
 risk_distance = abs(entry_level - stop_loss)
@@ -100,10 +96,17 @@ with tab_desk:
     st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data['rsi']:.2f}` | State Matrix Boundary: `[{brain_data['rsi_status']}]`")
     
     st.markdown("<br>", unsafe_allow_html=True)
-    tc1, tc2, tc3 = st.columns(3)
+    
+    # 📈 UNREALIZED PROFIT/LOSS TRACKER FIELD BLOCK
+    tc1, tc2, tc3, tc4 = st.columns(4)
     tc1.metric("TRACKED INSTRUMENT", str(symbol_choice))
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
+    
+    # Dynamic uP&L Calculator Engine
+    upl_val = bot.calculate_unrealized_pnl(symbol_choice, live_bid, live_ask, brain_data["market_trend"], st.session_state.brain_active)
+    upl_delta = "Exposure Idle" if not st.session_state.brain_active else ("Floating Profit" if upl_val >= 0 else "Floating Drawdown")
+    tc4.metric("UNREALIZED FLOATING P&L", f"${upl_val:+,.2f}", delta=upl_delta, delta_color="normal" if st.session_state.brain_active else "off")
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
@@ -137,7 +140,6 @@ with tab_desk:
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    # Rectangular Order Block Shape Overlay
     ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
@@ -150,7 +152,6 @@ with tab_desk:
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
     fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
-    # Shaded Position Tool Area
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["take_profit"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
@@ -158,8 +159,16 @@ with tab_desk:
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["take_profit"], y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
 
-    # FIX: Layout update optimized using width="stretch"
     st.plotly_chart(fig, width="stretch")
+
+    # 🔁 LIVE MARKET DATA POLLING LOOP SYSTEM
+    st.markdown("---")
+    st.markdown("##### 🔁 Automated Stream Data Feed Engine")
+    poll_active = st.toggle("Engage High-Frequency Streaming Loop (1-Sec Refresh Rate)", value=False)
+    
+    if poll_active:
+        time.sleep(1.0)
+        st.rerun()
 
 # ==========================================
 # --- TAB 2: LIVE TRADE JOURNAL LOGS -------
@@ -167,12 +176,3 @@ with tab_desk:
 with tab_journal:
     st.markdown("### 🗒️ Execution Ledger Data")
     
-    trades_list = bot.get_archived_trades()
-    trades_df = pd.DataFrame(trades_list)
-    
-    if trades_df.empty:
-        st.info("No historical executions recorded in standard environment arrays.")
-    else:
-        # FIX: Layout update optimized using width="stretch"
-        st.dataframe(trades_df, width="stretch")
-        
