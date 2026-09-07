@@ -28,7 +28,6 @@ broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value
 
 if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
     import MetaTrader5 as mt5
-    # Initialize connection conditionally depending on machine framework availability
     try:
         if mt5.initialize(login=int(broker_id), password=broker_pass, server=broker_server):
             st.session_state.gateway_connected = True
@@ -36,13 +35,13 @@ if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use
         else:
             st.sidebar.error(f"Handshake failed: {mt5.last_error()}")
     except AttributeError:
-        # Fallback simulation flag context for non-Windows host runtimes
         st.session_state.gateway_connected = True
         st.sidebar.success("Simulation Gateway linked successfully!")
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
 risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
+tp_ratio = st.sidebar.slider("Target Risk-to-Reward Ratio (1:X TP)", 1.0, 5.0, 2.0, step=0.5)
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
 st.sidebar.markdown("---")
@@ -59,7 +58,7 @@ else:
         st.rerun()
 
 # Run processing calculations from bot.py
-brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
+brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, tp_ratio)
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
 active_spread_points = round(abs(live_ask - live_bid), 4)
@@ -137,13 +136,14 @@ with tab_desk:
     
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
+    fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
     # Shaded Position Tool Area
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5), fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["take_profit"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
     else:
-        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["take_profit"], y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.12)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
 
     st.plotly_chart(fig, use_container_width=True)
@@ -154,7 +154,7 @@ with tab_desk:
 with tab_journal:
     st.markdown("### 🗒️ Execution Ledger Data")
     trades_list = get_archived_trades()
-    trades_df = pd.DataFrame(trades_list)  # Converts list format to DataFrame safely
+    trades_df = pd.DataFrame(trades_list)
     
     if trades_df.empty:
         st.info("No historical executions recorded in standard environment arrays.")
