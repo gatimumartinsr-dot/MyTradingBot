@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from bot import calculate_position_size, run_autonomous_brain, dispatch_live_order_matrix, fetch_live_market_tick, get_archived_trades, clear_trade_database
 
@@ -72,11 +71,10 @@ else:
     st.markdown("---")
 
     # ==========================================
-    # --- 🏢 SIDEBAR MASTER CONFIGURATION LAYER ---
+    # --- 🏢 SIDEBAR CONFIGURATION LAYER ---
     # ==========================================
     st.sidebar.header("🔀 Active Market Selector")
-    symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
-    symbol_default = str(symbol_choice).strip()
+    symbol_default = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
 
     st.sidebar.markdown("---")
     st.sidebar.header("🏢 Multi-Broker Gateway")
@@ -111,7 +109,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- Run background processing calculations ---
+    # --- Run background processing calculations based on current sidebar choice ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -145,11 +143,10 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Line Chart Layer - All braces fully verified and closed here
+        # Unbreakable HTML visualization canvas element
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
-        chart_data = pd.DataFrame({
-            "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
-            "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
-        })
+        st.markdown(f"""
+        <div style="background-color: #121620; padding: 25px; border-radius: 8px; border: 1px solid #1f2433; text-align: center;">
+            <p style="color: #8892b0; margin: 0; font-size: 14px;">MOMENTUM BID/ASK VOLATILITY RANGE</p>
