@@ -143,18 +143,17 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Flat visual charting layout 
+        # Front-End Chart Generator Layer
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 🕯️ Real-Time Historical Candlestick Chart (XAUUSDm)")
         
-        np.random.seed(42)
         c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
         walk = live_bid - 3.0
         
         for idx in range(30):
-            step = np.random.uniform(-1.0, 1.4)
+            movement = (idx * 0.12) + (live_bid % 3)
             o_val = walk
-            c_val = o_val + step
+            c_val = o_val + (0.5 if idx % 2 == 0 else -0.4)
             walk = c_val
             
             c_open.append(o_val)
