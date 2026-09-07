@@ -71,7 +71,9 @@ else:
     st.caption("Multi-Tenant Multi-Broker Algorithmic Execution Pipeline Engine")
     st.markdown("---")
 
-    # --- SIDEBAR CONFIGURATION LAYER ---
+    # ==========================================
+    # --- 🏢 SIDEBAR MASTER CONFIGURATION LAYER ---
+    # ==========================================
     st.sidebar.header("🔀 Active Market Selector")
     symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
     symbol_default = str(symbol_choice).strip()
@@ -109,10 +111,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
-    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
-
-    # Run calculation loops passing clean string symbol configuration
+    # --- Run background processing calculations using selection string ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -124,6 +123,9 @@ else:
     active_spread_points = round(abs(live_ask - live_bid), 4)
     max_allowable_spread = 5.00 if "BTC" in symbol_default else 0.50
     is_spread_breached = active_spread_points > max_allowable_spread
+
+    # --- DESK TAB LAYOUT SEPARATION MANAGER ---
+    tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
     # ==========================================
     # --- 🖥️ TAB 1: REAL-TIME LIVE DESK ---
@@ -143,7 +145,7 @@ else:
             st.markdown(f"**Trend Engine Target:** :{trend_color}[{trend_label}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
             st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data.get('rsi', 50.0):.2f}` | State Matrix Boundary: `[{brain_data.get('rsi_status', 'NEUTRAL')}]`")
 
-        # Native Chart Layer - Scaled safely around live asset price to avoid zero-flattening
+        # Native Line Chart Layer - Axis fixed snugly to avoid flattening
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Momentum Tracker ({symbol_default})")
         
@@ -151,4 +153,3 @@ else:
             "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
             "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
         })
-        # Using native line chart layout with y-axis baseline auto-scaled snugly to data bounds
