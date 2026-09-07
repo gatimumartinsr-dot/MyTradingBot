@@ -74,6 +74,7 @@ else:
     # ==========================================
     # --- 🏢 SIDEBAR MASTER CONFIGURATION LAYER ---
     # ==========================================
+    # Strictly isolated inside the 'else' workstation logic to guarantee proper layout rendering sequence
     st.sidebar.header("🔀 Active Market Selector")
     symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
     symbol_default = str(symbol_choice).strip()
@@ -111,7 +112,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # --- Run background processing calculations (Fixed Unpacking Typos) ---
+    # --- Run background processing calculations using selection string ---
     brain_data = None
     if st.session_state.brain_active:
         brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_default)
@@ -151,7 +152,3 @@ else:
         
         chart_data = pd.DataFrame({
             "Fast Momentum EMA": [live_bid - 0.4, live_bid - 0.2, live_bid + 0.1, live_bid],
-            "Slow Institutional EMA": [live_bid - 0.5, live_bid - 0.3, live_bid - 0.1, live_bid - 0.2]
-        })
-        st.line_chart(chart_data)
-
