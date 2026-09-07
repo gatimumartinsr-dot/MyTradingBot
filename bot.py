@@ -44,7 +44,6 @@ def clear_audit_ledger():
     except Exception: return False
 
 def store_manual_note(operator, note_text):
-    """Saves a handwritten session note to the local text journal repository."""
     try:
         init_databases()
         with open(NOTES_FILE, "r") as f: notes = json.load(f)
@@ -61,7 +60,7 @@ def store_manual_note(operator, note_text):
 def get_manual_notes():
     try:
         init_databases()
-        with open(NOTES_FILE, "r") as f: return json.load(f)
+        with open(NOTES_FILE, "r") as f: json.load(f)
     except Exception: return []
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
