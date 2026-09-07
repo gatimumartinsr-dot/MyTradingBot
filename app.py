@@ -27,8 +27,18 @@ broker_pass = st.sidebar.text_input("Trading Access Password", type="password", 
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value="Exness-MT5-Trial15")
 
 if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
-    st.session_state.gateway_connected = True
-    st.sidebar.success("Gateway linked successfully to cloud router nodes!")
+    import MetaTrader5 as mt5
+    # Initialize connection conditionally depending on machine framework availability
+    try:
+        if mt5.initialize(login=int(broker_id), password=broker_pass, server=broker_server):
+            st.session_state.gateway_connected = True
+            st.sidebar.success("Gateway linked successfully to cloud router nodes!")
+        else:
+            st.sidebar.error(f"Handshake failed: {mt5.last_error()}")
+    except AttributeError:
+        # Fallback simulation flag context for non-Windows host runtimes
+        st.session_state.gateway_connected = True
+        st.sidebar.success("Simulation Gateway linked successfully!")
 
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
@@ -160,12 +170,3 @@ with tab_journal:
 # --- TAB 3: SYSTEM CHECK RULES AUDIT ------
 # ==========================================
 with tab_rules:
-    st.markdown("### 📋 Automated Pre-Flight Safety Parameters")
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        st.checkbox("Broker Node Handshake Active", value=st.session_state.gateway_connected, disabled=True)
-        st.checkbox("Algorithmic Engine Authorized", value=st.session_state.brain_active, disabled=True)
-    with c2:
-        st.checkbox("Spread Buffer Under Maximum Cap", value=not is_spread_breached, disabled=True)
-        st.checkbox("Risk Metrics Within Safeguard Range", value=(risk_percentage <= 5.0), disabled=True)
