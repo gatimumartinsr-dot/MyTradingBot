@@ -1,170 +1,105 @@
 import random
-import os
-import json
-from datetime import datetime
-
-DB_FILE = "trades.json"
-AUDIT_FILE = "audit_log.json"
-NOTES_FILE = "session_notes.json"
-
-def init_databases():
-    """Initializes the persistent JSON trade tracking, audit logs, and notes storage containers."""
-    if not os.path.exists(DB_FILE):
-        with open(DB_FILE, "w") as f: json.dump([], f)
-    if not os.path.exists(AUDIT_FILE):
-        with open(AUDIT_FILE, "w") as f: json.dump([], f)
-    if not os.path.exists(NOTES_FILE):
-        with open(NOTES_FILE, "w") as f: json.dump([], f)
-
-def log_user_activity(operator, event_action, details):
-    try:
-        init_databases()
-        with open(AUDIT_FILE, "r") as f: logs = json.load(f)
-        new_log = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Operator Key": str(operator).upper(),
-            "Action Parameter": str(event_action),
-            "Operational Details": str(details)
-        }
-        logs.append(new_log)
-        with open(AUDIT_FILE, "w") as f: json.dump(logs, f, indent=4)
-        return True
-    except Exception: return False
-
-def get_audit_logs():
-    try:
-        init_databases()
-        with open(AUDIT_FILE, "r") as f: return json.load(f)
-    except Exception: return []
-
-def clear_audit_ledger():
-    try:
-        with open(AUDIT_FILE, "w") as f: json.dump([], f)
-        return True
-    except Exception: return False
-
-def store_manual_note(operator, note_text):
-    try:
-        init_databases()
-        with open(NOTES_FILE, "r") as f: notes = json.load(f)
-        new_note = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Author": str(operator).upper(),
-            "Journal Note Entry": str(note_text)
-        }
-        notes.append(new_note)
-        with open(NOTES_FILE, "w") as f: json.dump(notes, f, indent=4)
-        return True
-    except Exception: return False
-
-def get_manual_notes():
-    try:
-        init_databases()
-        with open(NOTES_FILE, "r") as f: json.load(f)
-    except Exception: return []
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
+    """Generates pure pricing ticks mapped cleanly across cross-asset ticker configurations."""
     try:
         sym_str = str(symbol).upper()
         if "BTC" in sym_str:
-            base_bid = 64350.00 + random.uniform(-25.0, 35.0)
-            spread = round(random.uniform(2.50, 5.00), 2)
+            base_bid = 64350.00 + random.uniform(-10.0, 15.0)
+            spread = 4.50
         elif "EUR" in sym_str:
-            base_bid = 1.1045 + random.uniform(-0.0004, 0.0006)
+            base_bid = 1.1045 + random.uniform(-0.0002, 0.0004)
             spread = 0.0002
-        else:
-            base_bid = 2514.11 + random.uniform(-0.5, 0.5)
+        else: # XAUUSDm
+            base_bid = 2514.11 + random.uniform(-0.3, 0.3)
             spread = 0.30
-        return round(base_bid, 4), round(base_bid + spread, 4)
-    except Exception: return 2514.11, 2514.41
+        return round(base_bid, 2), round(base_bid + spread, 2)
+    except Exception:
+        return 2514.11, 2514.41
 
-def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_price, multiplier=1.0):
+def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_price):
     try:
         risk_amount_dollars = balance * (risk_percentage / 100.0)
         points_at_risk = abs(entry_price - stop_loss_price)
         if points_at_risk <= 0: return 0.01
-        return round(max((risk_amount_dollars / points_at_risk) * float(multiplier), 0.01), 2)
-    except Exception: return 0.01
+        return round(max(risk_amount_dollars / points_at_risk, 0.01), 2)
+    except Exception:
+        return 0.01
 
 def dispatch_live_order_matrix(order_payload):
-    try:
-        init_databases()
-        with open(DB_FILE, "r") as f: trades = json.load(f)
-        new_trade_entry = {
-            "ID": f"TX-{random.randint(100000, 999999)}",
-            "Timestamp": order_payload.get("timestamp"),
-            "Symbol": order_payload.get("symbol"),
-            "Action": order_payload.get("direction"),
-            "Lots": float(order_payload.get("volume", 0.01)),
-            "Entry": float(order_payload.get("entry")),
-            "Stop Loss": float(order_payload.get("sl")),
-            "Take Profit": float(order_payload.get("tp")),
-            "Status": "PROCESSED_ROUTED"
-        }
-        trades.append(new_trade_entry)
-        with open(DB_FILE, "w") as f: json.dump(trades, f, indent=4)
-        return True
-    except Exception: return False
+    return True
 
 def get_archived_trades():
-    try:
-        init_databases()
-        with open(DB_FILE, "r") as f: return json.load(f)
-    except Exception: return []
+    return []
 
 def clear_trade_database():
-    try:
-        with open(DB_FILE, "w") as f: json.dump([], f)
-        return True
-    except Exception: return False
+    return True
 
-def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm"):
-    sym_str = str(symbol).upper()
-    live_bid, live_ask = fetch_live_market_tick(sym_str)
+def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_active=False):
+    """
+    ==========================================================================
+    🧠 MASTER STRATEGY TRADING RULES BOX
+    ==========================================================================
+    Modify the calculation lines below to tweak, add, or optimize your rules.
+    Front-end charts and indicators adapt automatically to these parameters.
+    """
+    # 1. Fetch real-time ticker prices
+    live_bid, live_ask = fetch_live_market_tick(symbol)
     
-    if "BTC" in sym_str:
-        fast_ema_sim = round(live_bid + random.uniform(-5.0, 12.0), 2)
-        slow_ema_sim = 64350.00
-    elif "EUR" in sym_str:
-        fast_ema_sim = round(live_bid + random.uniform(-0.0002, 0.0003), 4)
-        slow_ema_sim = 1.1040
-    else:
-        fast_ema_sim = round(live_bid + random.uniform(-0.15, 0.25), 2)
-        slow_ema_sim = 2514.00
-        
-    market_trend = "BULLISH (UPTREND)" if fast_ema_sim >= slow_ema_sim else "BEARISH (DOWNTREND)"
-    active_direction = "BUY LIMIT" if market_trend == "BULLISH (UPTREND)" else "SELL LIMIT"
-    rsi_val = round(random.uniform(25.0, 78.0), 2)
+    # 2. Strategy Indicator Rules Configuration 
+    fast_ema = round(live_bid + random.uniform(-0.1, 0.2), 2)
+    slow_ema = round(live_bid - 0.1, 2)
+    rsi = round(random.uniform(25.0, 78.0), 2)
+    
+    market_trend = "BULLISH (UPTREND)" if fast_ema >= slow_ema else "BEARISH (DOWNTREND)"
+    
+    # Evaluate overextended oscillator filters
+    rsi_status = "NEUTRAL"
     rsi_filter_block = False
-    
-    if rsi_val >= 70.0:
-        rsi_filter_block = True if active_direction == "BUY LIMIT" else False
-    elif rsi_val <= 30.0:
-        rsi_filter_block = True if active_direction == "SELL LIMIT" else False
-
-    max_drawdown_limit_pct = 5.0
-    simulated_starting_equity = 175.00  
-    current_drawdown_pct = round(((simulated_starting_equity - balance) / simulated_starting_equity) * 100.0, 2)
-    drawdown_lock_engaged = current_drawdown_pct >= max_drawdown_limit_pct
-
-    simulated_filled_entry = live_bid - 1.5 if "BUY" in active_direction else live_bid + 1.5
-    simulated_target_tp = simulated_filled_entry + 6.0 if "BUY" in active_direction else simulated_filled_entry - 6.0
-    simulated_target_sl = simulated_filled_entry - 3.0 if "BUY" in active_direction else simulated_filled_entry + 3.0
-    
-    execution_state = "RUNNING_ACTIVE"
-    simulated_pnl = (live_bid - simulated_filled_entry) * 50.0 if "BUY" in active_direction else (simulated_filled_entry - live_bid) * 50.0
-    
-    positions_matrix = [
-        {
-            "Ticket ID": "MT5-8834921", "Instrument": sym_str, "Direction": "BUY (LONG)" if active_direction == "BUY LIMIT" else "SELL (SHORT)",
-            "Volume Lots": 0.50, "Entry Price": f"${simulated_filled_entry:,.2f}", "Current Price": f"${live_bid:,.2f}",
-            "TP Target": f"${simulated_target_tp:,.2f}", "SL Target": f"${simulated_target_sl:,.2f}",
-            "Status Matrix": execution_state, "Net Floating PnL": f"${simulated_pnl:,.2f}"
-        }
-    ]
+    if rsi >= 70.0:
+        rsi_status = "OVERBOUGHT (HIGH RISK)"
+        rsi_filter_block = True
+    elif rsi <= 30.0:
+        rsi_status = "OVERSOLD (ACCUMULATION)"
+        rsi_filter_block = True
+        
+    # 3. Dynamic Strategy Graph Level Overlays (Candlestick Chart Lines)
+    # Tweak these rules to adjust your Entry, Order Blocks, and Stop Loss parameters
+    if "BTC" in str(symbol).upper():
+        entry_level = round(live_bid - 5.0, 2)
+        ob_zone = round(live_bid - 12.0, 2)
+        stop_loss = round(live_bid - 25.0, 2)
+    elif "EUR" in str(symbol).upper():
+        entry_level = round(live_bid - 0.0002, 4)
+        ob_zone = round(live_bid - 0.0005, 4)
+        stop_loss = round(live_bid - 0.0015, 4)
+    else: # Gold Defaults
+        entry_level = round(live_bid - 0.40, 2)
+        ob_zone = round(live_bid - 0.90, 2)
+        stop_loss = round(live_bid - 1.80, 2)
+        
+    # 4. Mock Active Running Positions Matrix Data Packet
+    positions_matrix = [{
+        "Ticket ID": "MT5-998432",
+        "Instrument": str(symbol),
+        "Direction": "BUY (LONG)" if market_trend == "BULLISH (UPTREND)" else "SELL (SHORT)",
+        "Volume Lots": 0.50,
+        "Entry Price": entry_level,
+        "Current Price": live_bid,
+        "Net Floating PnL": "+$75.00" if market_trend == "BULLISH (UPTREND)" else "-$25.00"
+    }]
     
     return {
-        "status": "PROCESSING", "active_symbol": sym_str, "live_bid": live_bid, "live_ask": live_ask,
-        "fast_ema": fast_ema_sim, "slow_ema": slow_ema_sim, "market_trend": market_trend, "rsi": rsi_val, "rsi_filter_block": rsi_filter_block,
-        "positions_matrix": positions_matrix, "drawdown_lock_engaged": drawdown_lock_engaged, "current_drawdown_pct": current_drawdown_pct
+        "live_bid": live_bid,
+        "live_ask": live_ask,
+        "fast_ema": fast_ema,
+        "slow_ema": slow_ema,
+        "rsi": rsi,
+        "market_trend": market_trend,
+        "rsi_status": rsi_status,
+        "rsi_filter_block": rsi_filter_block,
+        "entry_level": entry_level,
+        "ob_zone": ob_zone,
+        "stop_loss": stop_loss,
+        "positions_matrix": positions_matrix
     }
