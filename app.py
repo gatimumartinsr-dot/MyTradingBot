@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
+import bot  # Import as module to avoid function cache locks
 
 # Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
@@ -27,14 +27,14 @@ broker_pass = st.sidebar.text_input("Trading Access Password", type="password", 
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Server String", value="Exness-MT5-Trial15")
 
 if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
-    import MetaTrader5 as mt5
     try:
+        import MetaTrader5 as mt5
         if mt5.initialize(login=int(broker_id), password=broker_pass, server=broker_server):
             st.session_state.gateway_connected = True
             st.sidebar.success("Gateway linked successfully to cloud router nodes!")
         else:
             st.sidebar.error(f"Handshake failed: {mt5.last_error()}")
-    except AttributeError:
+    except (AttributeError, ModuleNotFoundError):
         st.session_state.gateway_connected = True
         st.sidebar.success("Simulation Gateway linked successfully!")
 
@@ -57,8 +57,15 @@ else:
         st.session_state.brain_active = False
         st.rerun()
 
-# Run processing calculations from bot.py
-brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, tp_ratio)
+# Run processing calculations from bot.py safely matching signature limits
+brain_data = bot.run_autonomous_brain(
+    account_balance=account_balance, 
+    risk_percentage=risk_percentage, 
+    symbol_choice=symbol_choice, 
+    brain_active=st.session_state.brain_active, 
+    tp_ratio=tp_ratio
+)
+
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
 active_spread_points = round(abs(live_ask - live_bid), 4)
@@ -153,7 +160,7 @@ with tab_desk:
 # ==========================================
 with tab_journal:
     st.markdown("### 🗒️ Execution Ledger Data")
-    trades_list = get_archived_trades()
+    trades_list = bot.get_archived_trades()
     trades_df = pd.DataFrame(trades_list)
     
     if trades_df.empty:
@@ -162,10 +169,8 @@ with tab_journal:
         st.dataframe(trades_df, use_container_width=True)
         
     if st.button("🗑️ PURGE ARCHIVED DATABASE ROUTINES", type="secondary"):
-        clear_trade_database()
+        bot.clear_trade_database()
         st.toast("Database cleared successfully!")
         st.rerun()
 
-# ==========================================
-# --- TAB 3: SYSTEM CHECK RULES AUDIT ------
 # ==========================================
