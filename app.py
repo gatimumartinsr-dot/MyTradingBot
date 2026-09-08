@@ -12,12 +12,11 @@ st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="ðŸŸ
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
 # Application persistence session parameters state engine
-if "logged_in" not in st.session_state: st.session_state.logged_in = True  # Hard-locked active to bypass entry forms
+if "logged_in" not in st.session_state: st.session_state.logged_in = True  
 if "username" not in st.session_state: st.session_state.username = "martins"
-if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True  # Hard-locked true to bypass layout blocks
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True  
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
 
-# Operator active terminal layout
 operator_id = st.session_state.username.upper()
 current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -158,3 +157,4 @@ with tab_desk:
     o_c1, o_c2 = st.columns(2)
     order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
     entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+    calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
