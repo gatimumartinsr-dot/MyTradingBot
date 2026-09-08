@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-import pytllib if 'pytllib' in locals() else None
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
 # Core terminal workspace configuration settings
@@ -158,3 +157,4 @@ else:
         
         fig.update_layout(
             font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
+            paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=400,
