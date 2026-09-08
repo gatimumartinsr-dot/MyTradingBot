@@ -86,6 +86,10 @@ else:
     account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
     st.sidebar.markdown("---")
+    st.sidebar.header("🎚️ Contract Leverage Protocol")
+    lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
+
+    st.sidebar.markdown("---")
     st.sidebar.header("🧠 Cloud Hands-Free Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
@@ -155,6 +159,3 @@ else:
             increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
         )])
         
-        fig.update_layout(
-            font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
-            paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=400,
