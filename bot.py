@@ -73,9 +73,12 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
+    # TRUE MATHEMATICAL EXPONENTIAL MOVING AVERAGE SYSTEM
     def calculate_ema(data_array, period):
+        if not data_array: return 0.0
         k = 2 / (period + 1)
-        ema_values = [data_array]
+        # ⚡ THE MATHEMATICAL FIX: Seed the list array with just the first numeric float point item
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -112,7 +115,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         entry_level = round(live_bid, 4)
         ob_base = round(slow_ema - 0.0002, 4)
         stop_loss = round(ob_base - 0.0006, 4) if "BUY" in active_direction else round(ob_base + 0.0006, 4)
-    else: # Gold
+    else: # Gold Defaults
         entry_level = round(live_bid, 2)
         ob_base = round(slow_ema - 0.40, 2)
         stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
