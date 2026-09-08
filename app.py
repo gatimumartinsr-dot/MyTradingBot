@@ -5,22 +5,23 @@ import plotly.graph_objects as go
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
-# Core terminal view settings
+# Core terminal workspace configuration settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Premium mobile-responsive deep dark institutional layout wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Session parameters initialization
+# Application persistence session parameters state engine
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "user_db" not in st.session_state: st.session_state.user_db = {"martins": "helix2026"}
+if "user_db" not in st.session_state:
+    st.session_state.user_db = {"martins": "helix2026"}
 
-# ===================================================
-# REQUIREMENT 1, 7: MOBILE RESPONSIVE REGISTRATION LOCK
-# ===================================================
+# ==========================================
+# --- 1. SYSTEM REGISTRATION LOGIN GUARD ---
+# ==========================================
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 40px;'>🟢 HELIX OB SECURITY PORTAL</h1>", unsafe_allow_html=True)
     st.markdown("---")
@@ -46,13 +47,14 @@ if not st.session_state.logged_in:
                 if reg_user and reg_pass:
                     st.session_state.user_db[reg_user] = reg_pass
                     st.success("Trader credentials initialized successfully! Please switch to Sign In.")
-                else: st.warning("Please fill out all credential fields.")
+                else: st.warning("Please fill out all credential configuration fields.")
 else:
-    # Operator layout header
+    # Operator active terminal layout
     operator_id = st.session_state.username.upper()
     current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    st.markdown(f"<div style='float: right; color: #8892b0;'>Operator: `{operator_id}` | System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
+    # Sign out wrapper element
+    st.markdown(f"<div style='float: right; color: #8892b0;'>Operator: `{operator_id}` | Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
     if st.button("🔒 Sever Connection Session", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.brain_active = False
@@ -62,29 +64,33 @@ else:
     st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
     st.markdown("---")
 
-    # ===================================================
-    # REQUIREMENT 2: UNIVERSAL BROKER REGISTRATION SIDEBAR
-    # ===================================================
+    # ==========================================
+    # --- 🏢 SIDEBAR PANEL CONTROL MATRIX ----
+    # ==========================================
     st.sidebar.header("🔀 Active Market Selector")
     symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🏢 Multi-Broker Node Gateway")
-    broker_choice = st.sidebar.text_input("Broker Name (Exness, XM, MT5)", value="Exness Global")
+    st.sidebar.header("🏢 2. Register Any Broker Gateway")
+    broker_choice = st.sidebar.text_input("Broker Endpoint Name", value="Exness Global")
     account_environment = st.sidebar.radio("Server Environment Type", ["Demo Server Node", "Live Production Account"], horizontal=True)
     broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
-    broker_server = st.sidebar.text_input("Target Broker Cloud Server String", value="Exness-MT5-Trial15")
+    broker_server = st.sidebar.text_input("Target MetaTrader 5 Cloud Server String", value="Exness-MT5-Trial15")
 
     if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
         st.session_state.gateway_connected = True
-        st.sidebar.success(f"Linked securely to {broker_choice} cloud routing matrix!")
+        st.sidebar.success(f"Linked securely to {broker_choice} MT5 cloud routing matrix!")
 
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
     account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🧠 Autonomous Execution")
+    st.sidebar.header("🎚️ Contract Leverage Protocol")
+    lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("🧠 Cloud Hands-Free Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
             if not st.session_state.gateway_connected: st.sidebar.error("Aborted: Link Multi-Broker Gateway first!")
@@ -94,9 +100,10 @@ else:
     else:
         if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
             st.session_state.brain_active = False
+            st.sidebar.warning("Administrative automated thread block engaged.")
             st.rerun()
 
-    # Run processing core calculation scripts from bot module
+    # --- Run processing calculations from bot module (Feeds Scraped Real Prices) ---
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
     live_bid = brain_data["live_bid"]
     live_ask = brain_data["live_ask"]
@@ -114,9 +121,9 @@ else:
 
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
-    # ===================================================
-    # REQUIREMENT 5: SYMBOL-SPECIFIC CHARTING & OB LABELS
-    # ===================================================
+    # ==========================================
+    # --- TAB 1: REAL-TIME LIVE DESK ----------
+    # ==========================================
     with tab_desk:
         trend_color = "green" if "BULLISH" in brain_data["market_trend"] else "red"
         st.markdown(f"**Trend Engine Target:** :{trend_color}[{brain_data['market_trend']}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
@@ -128,8 +135,9 @@ else:
         tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
         tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
         
+        # --- 5. HIGH-FIDELITY CANDLESTICK CHART CONFIGURED TO CHOSEN SYMBOL ---
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
+        st.markdown(f"### 🕯️ Real-Time Matrix Market Trend Monitor ({symbol_choice})")
         
         np.random.seed(42)
         c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
@@ -151,9 +159,3 @@ else:
             increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
         )])
         
-        # ⚡ PRO RECTANGULAR ALIGNMENT MAP FIX
-        fig.update_layout(
-            font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
-            paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
-            margin=dict(l=10, r=10, t=15, b=10),
-            xaxis=dict(showgrid=True, gridcolor='#1f2433', type='category'),
