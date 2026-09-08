@@ -11,16 +11,16 @@ st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="�
 # Premium mobile-responsive deep dark institutional layout wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Application state parameters state engine configurations
+# Session parameters initialization
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
 if "user_db" not in st.session_state: st.session_state.user_db = {"martins": "helix2026"}
 
-# ==========================================
-# --- 1. SYSTEM REGISTRATION LOGIN GUARD ---
-# ==========================================
+# ===================================================
+# REQUIREMENT 1, 7: MOBILE RESPONSIVE REGISTRATION LOCK
+# ===================================================
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 40px;'>🟢 HELIX OB SECURITY PORTAL</h1>", unsafe_allow_html=True)
     st.markdown("---")
@@ -33,7 +33,7 @@ if not st.session_state.logged_in:
         if gate_mode == "Sign In to Workspace":
             user_input = st.text_input("Workspace Username Key").strip().lower()
             pass_input = st.text_input("Access Password", type="password").strip()
-            if st.button("Authorize Connection Session", type="primary", key="auth_btn"):
+            if st.button("Authorize Connection Session", type="primary", use_container_width=True):
                 if user_input in st.session_state.user_db and st.session_state.user_db[user_input] == pass_input:
                     st.session_state.logged_in = True
                     st.session_state.username = user_input
@@ -42,18 +42,18 @@ if not st.session_state.logged_in:
         else:
             reg_user = st.text_input("Choose Unique Username Key").strip().lower()
             reg_pass = st.text_input("Create Secure Access Password", type="password").strip()
-            if st.button("Generate Workspace Credentials", type="primary", key="reg_btn"):
+            if st.button("Generate Workspace Credentials", type="primary", use_container_width=True):
                 if reg_user and reg_pass:
                     st.session_state.user_db[reg_user] = reg_pass
                     st.success("Trader credentials initialized successfully! Please switch to Sign In.")
-                else: st.warning("Please fill out all credential configuration fields.")
+                else: st.warning("Please fill out all credential fields.")
 else:
-    # Operator active terminal layout
+    # Operator layout header
     operator_id = st.session_state.username.upper()
     current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | Live Clock: `{current_time_stamp}`</div>", unsafe_allow_html=True)
-    if st.button("🔒 Sever Connection Session", type="secondary", key="logout_btn"):
+    st.markdown(f"<div style='float: right; color: #8892b0;'>Operator: `{operator_id}` | System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
+    if st.button("🔒 Sever Connection Session", type="secondary"):
         st.session_state.logged_in = False
         st.session_state.brain_active = False
         st.rerun()
@@ -62,42 +62,41 @@ else:
     st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
     st.markdown("---")
 
-    # ==========================================
-    # --- 🏢 SIDEBAR PANEL CONTROL MATRIX ----
-    # ==========================================
+    # ===================================================
+    # REQUIREMENT 2: UNIVERSAL BROKER REGISTRATION SIDEBAR
+    # ===================================================
     st.sidebar.header("🔀 Active Market Selector")
     symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🏢 2. Register Any Broker Gateway")
-    broker_choice = st.sidebar.text_input("Broker Endpoint Name", value="Exness Global")
+    st.sidebar.header("🏢 Multi-Broker Node Gateway")
+    broker_choice = st.sidebar.text_input("Broker Name (Exness, XM, MT5)", value="Exness Global")
     account_environment = st.sidebar.radio("Server Environment Type", ["Demo Server Node", "Live Production Account"], horizontal=True)
     broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
-    broker_server = st.sidebar.text_input("Target MetaTrader 5 Cloud Server String", value="Exness-MT5-Trial15")
+    broker_server = st.sidebar.text_input("Target Broker Cloud Server String", value="Exness-MT5-Trial15")
 
-    if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", key="broker_btn"):
+    if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
         st.session_state.gateway_connected = True
-        st.sidebar.success(f"Linked securely to {broker_choice} MT5 cloud routing matrix!")
+        st.sidebar.success(f"Linked securely to {broker_choice} cloud routing matrix!")
 
     st.sidebar.header("⚙️ Risk Parameter Protocol")
     risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
     account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
     st.sidebar.markdown("---")
-    st.sidebar.header("🧠 Cloud Hands-Free Mode")
+    st.sidebar.header("🧠 Autonomous Execution")
     if not st.session_state.brain_active:
-        if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", key="brain_start_btn"):
+        if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
             if not st.session_state.gateway_connected: st.sidebar.error("Aborted: Link Multi-Broker Gateway first!")
             else:
                 st.session_state.brain_active = True
                 st.rerun()
     else:
-        if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", key="brain_stop_btn"):
+        if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
             st.session_state.brain_active = False
-            st.sidebar.warning("Administrative automated thread block engaged.")
             st.rerun()
 
-    # --- Run processing calculations from bot module (Feeds Scraped Real Prices) ---
+    # Run processing core calculation scripts from bot module
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
     live_bid = brain_data["live_bid"]
     live_ask = brain_data["live_ask"]
@@ -115,9 +114,9 @@ else:
 
     tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
-    # ==========================================
-    # --- TAB 1: REAL-TIME LIVE DESK ----------
-    # ==========================================
+    # ===================================================
+    # REQUIREMENT 5: SYMBOL-SPECIFIC CHARTING & OB LABELS
+    # ===================================================
     with tab_desk:
         trend_color = "green" if "BULLISH" in brain_data["market_trend"] else "red"
         st.markdown(f"**Trend Engine Target:** :{trend_color}[{brain_data['market_trend']}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
@@ -129,7 +128,6 @@ else:
         tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
         tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
         
-        # --- 5. INTERACTIVE CANDLESTICK CHART CONFIGURED TO CHOSEN SYMBOL ---
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
         
@@ -153,6 +151,9 @@ else:
             increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
         )])
         
-        # ⚡ EXPANDED WIDTH REMODEL: Updated containers parameters to satisfy latest layout compiler engine
+        # ⚡ PRO RECTANGULAR ALIGNMENT MAP FIX
         fig.update_layout(
             font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
+            paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
+            margin=dict(l=10, r=10, t=15, b=10),
+            xaxis=dict(showgrid=True, gridcolor='#1f2433', type='category'),
