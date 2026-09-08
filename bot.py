@@ -18,9 +18,18 @@ def get_archived_trades():
         if os.path.exists(DB_FILE):
             with open(DB_FILE, "r") as f:
                 data = json.load(f)
-                return data if isinstance(data, list) else []
+                if isinstance(data, list) and len(data) > 0:
+                    return data
+        
+        # ⚡ THE ARRRAY REPAIR MATRIX: Forces a clean default dictionary shape so app.py can map columns perfectly
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return [
+            {"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"},
+            {"Transaction ID": "TX-8824", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 64365.00, "Current Real Market Price": 64350.00, "Net Floating PnL Balance": "+$110.40"},
+            {"Transaction ID": "TX-7142", "Date Time Stamp (Local)": current_time, "Symbol Asset": "EURUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.10, "Entry Execution Price": 1.1033, "Current Real Market Price": 1.1045, "Net Floating PnL Balance": "-$12.00"}
+        ]
+    except Exception: 
         return []
-    except Exception: return []
 
 def clear_trade_database():
     init_db()
@@ -33,9 +42,13 @@ def dispatch_live_order_matrix(order_payload):
     init_db()
     try:
         trades = get_archived_trades()
+        # Filter out default filler rows before logging new physical manual dispatches
+        if len(trades) > 0 and trades[0]["Transaction ID"] == "TX-9931":
+            trades = []
+            
         new_row = {
             "Transaction ID": f"TX-{random.randint(50000, 99999)}",
-            "Date Time Stamp (Local)": order_payload.get("timestamp"),
+            "Date Time Stamp (Local)": str(order_payload.get("timestamp")),
             "Symbol Asset": str(order_payload.get("symbol")),
             "Direction Target": str(order_payload.get("direction")),
             "Volume Lots": float(order_payload.get("volume", 0.01)),
@@ -135,30 +148,26 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
         
     raw_saved = get_archived_trades()
+    positions_matrix = []
     
     btc_bid, _ = fetch_live_market_tick("BTCUSDm")
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ FIXED LINE 202: Brackets closed safely to dissolve syntax compiler crashes
-    if brain_active and raw_saved:
-        positions_matrix = []
-        for trade in raw_saved:
-            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
-            sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
-            pnl_sign = "+" if sim_pnl >= 0 else ""
-            positions_matrix.append({
-                "Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""),
-                "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
-                "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
-            })
-    else:
-        current_time = datetime.now().strftime("%H:%M:%S")
-        positions_matrix = [
-            {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL": "+$45.20"},
-            {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL": "+$110.40"},
-            {"Ticket ID": "OB-7142", "Timestamp (Local)": current_time, "Instrument Asset": "EURUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.10, "Entry Price": f"${eur_bid-0.0012:,.4f}", "Current Price": f"${eur_bid:,.4f}", "Net Floating PnL": "-$12.00"}
-        ]
+    for trade in raw_saved:
+        current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
+        sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
+        pnl_sign = "+" if sim_pnl >= 0 else ""
+        positions_matrix.append({
+            "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
+            "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
+            "Instrument Asset": trade.get("Symbol Asset", symbol), 
+            "Direction Matrix": trade.get("Direction Target", ""),
+            "Volume Lots": trade.get("Volume Lots", 0.01), 
+            "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
+            "Current Price": f"${current_asset_price:,.2f}", 
+            "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+        })
     
     return {
         "live_bid": live_bid, "live_ask": live_ask, "fast_ema": fast_ema, "slow_ema": slow_ema,
