@@ -36,10 +36,6 @@ risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
 st.sidebar.markdown("---")
-st.sidebar.header("🎚️ Contract Leverage Protocol")
-lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
-
-st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
 if not st.session_state.brain_active:
     if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
@@ -52,7 +48,7 @@ else:
         st.session_state.brain_active = False
         st.rerun()
 
-# --- Run processing calculations from bot.py core ---
+# Run calculations from bot.py
 brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
@@ -91,7 +87,7 @@ with tab_desk:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     
-    # Generate candlestick timeline values safely
+    # Generate candlestick data safely
     np.random.seed(42)
     c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
     walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
@@ -132,7 +128,7 @@ with tab_desk:
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
 
-    # Shaded Position Tool Area
+    # ⚡ FIXED INDENTATION STRIP: Perfectly aligned 4-space indentation block shapes to guarantee zero compilation breaks
     if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5), fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
         fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
@@ -161,3 +157,5 @@ with tab_desk:
     if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
         payload_packet = {}
         payload_packet["symbol"] = str(symbol_choice)
+        payload_packet["direction"] = str(order_direction)
+        payload_packet["volume"] = float(calculated_lots)
