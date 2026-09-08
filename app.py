@@ -3,18 +3,15 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime
-import time  # 🌟 RESTORED: Critical background module preventing UI initialization
-import random
-import bot 
+from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
 # Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# Initialize persistent session states to keep variables anchored across tab changes
-if "gateway_connected" not in st.session_state: 
-    st.session_state.gateway_connected = False
-if "brain_active" not in st.session_state: 
-    st.session_state.brain_active = False
+st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; }</style>", unsafe_allow_html=True)
+
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
+if "brain_active" not in st.session_state: st.session_state.brain_active = False
 
 # ==========================================
 # --- 🏢 SIDEBAR PANEL CONTROL MATRIX ----
@@ -23,7 +20,7 @@ st.sidebar.header("🔀 Active Market Ticker")
 symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
 
 st.sidebar.markdown("---")
-st.sidebar.header("🏢 Multi-Broker Node Gateway")
+st.sidebar.header("🏢 Multi-Broker Gateway Key")
 broker_name = st.sidebar.text_input("Broker Endpoint Name", value="Exness Global")
 broker_id = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
 broker_pass = st.sidebar.text_input("Trading Access Password", type="password", value="Pu,24ppy")
@@ -36,15 +33,17 @@ if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use
 st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
 risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
-tp_ratio = st.sidebar.slider("Target Risk-to-Reward Ratio (1:X TP)", 1.0, 5.0, 2.0, step=0.5)
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
+
+st.sidebar.markdown("---")
+st.sidebar.header("🎚️ Contract Leverage Protocol")
+lot_multiplier = st.sidebar.slider("Lot Size Volume Multiplier Matrix", 1.0, 5.0, 1.0, step=0.5)
 
 st.sidebar.markdown("---")
 st.sidebar.header("🧠 Autonomous Execution")
 if not st.session_state.brain_active:
     if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
-        if not st.session_state.gateway_connected: 
-            st.sidebar.error("Authorize live broker handshake first!")
+        if not st.session_state.gateway_connected: st.sidebar.error("Authorize live broker handshake first!")
         else:
             st.session_state.brain_active = True
             st.rerun()
@@ -53,23 +52,8 @@ else:
         st.session_state.brain_active = False
         st.rerun()
 
-# 🛡️ SAFE CALCULATION EXTRAPOLATION MATRIX
-brain_data = bot.run_autonomous_brain(
-    account_balance, 
-    risk_percentage, 
-    symbol_choice, 
-    st.session_state.brain_active
-)
-
-entry_level = brain_data["entry_level"]
-stop_loss = brain_data["stop_loss"]
-risk_distance = abs(entry_level - stop_loss)
-
-if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
-    brain_data["take_profit"] = round(entry_level + (risk_distance * tp_ratio), 4)
-else:
-    brain_data["take_profit"] = round(entry_level - (risk_distance * tp_ratio), 4)
-
+# --- Run processing calculations from bot.py core ---
+brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
 active_spread_points = round(abs(live_ask - live_bid), 4)
@@ -80,7 +64,7 @@ st.title("🟢 Helix OB — Institutional Matrix Workspace")
 st.caption("Consolidated Multi-Asset Algorithmic Pipeline Control Room")
 st.markdown("---")
 
-# Permanent layout core metrics block (Guaranteed to render first)
+# Permanent layout core metrics block
 m_c1, m_c2, m_c3, m_c4 = st.columns(4)
 m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
 m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
@@ -88,9 +72,6 @@ m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_
 risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Main Navigation Workspace
 tab_desk, tab_journal, tab_rules = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit"])
 
 # ==========================================
@@ -102,34 +83,19 @@ with tab_desk:
     st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data['rsi']:.2f}` | State Matrix Boundary: `[{brain_data['rsi_status']}]`")
     
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    tc1, tc2, tc3, tc4 = st.columns(4)
+    tc1, tc2, tc3 = st.columns(3)
     tc1.metric("TRACKED INSTRUMENT", str(symbol_choice))
     tc2.metric("CURRENT MARKET SPREAD", f"{active_spread_points} Points")
     tc3.metric("SPREAD GAP LIMIT STATUS", "SECURE BOUNDS" if not is_spread_breached else "BREACHED EXCESSIVE")
     
-    # Live uP&L Tracking Matrix
-    upl_val = 0.00
-    if st.session_state.brain_active:
-        multiplier = 5.0 if "BTC" in symbol_choice else (10000.0 if "EUR" in symbol_choice else 50.0)
-        base_entry = 58420.0 if "BTC" in symbol_choice else (1.0845 if "EUR" in symbol_choice else 4413.26)
-        if "BULLISH" in brain_data["market_trend"] or "BUY" in brain_data["market_trend"]:
-            upl_val = round((live_bid - base_entry) * multiplier, 2)
-        else:
-            upl_val = round((base_entry - live_ask) * multiplier, 2)
-            
-    upl_delta = "Exposure Idle" if not st.session_state.brain_active else ("Floating Profit" if upl_val >= 0 else "Floating Drawdown")
-    tc4.metric("UNREALIZED FLOATING P&L", f"${upl_val:+,.2f}", delta=upl_delta, delta_color="normal" if st.session_state.brain_active else "off")
-    
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     
-    # Generate candlestick data safely
-    np.random.seed(int(time.time() * 1000) % 2**32)
+    # Generate candlestick timeline values safely
+    np.random.seed(42)
     c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
-    walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 12.5))
-    scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 2.5)
-    
+    walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
+    scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 0.8)
     for i in range(30):
         step = np.random.uniform(-scale, scale * 1.04)
         o_val = walk
@@ -146,19 +112,6 @@ with tab_desk:
         increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
     )])
     
-    # Visual Execution Signals Overlay Filter
-    sig_text = "🟢 HELIX AUTONOMOUS BUY" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "🔴 HELIX AUTONOMOUS SELL"
-    sig_color = "#00ff99" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "#ff3366"
-    sig_y = min(c_low) - (scale * 1.5) if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else max(c_high) + (scale * 1.5)
-    
-    fig.add_trace(go.Scatter(
-        x=["M-15"], y=[sig_y], mode="markers+text",
-        marker=dict(symbol="triangle-up" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "triangle-down", size=14, color=sig_color),
-        text=[sig_text], textposition="bottom center" if ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]) else "top center",
-        textfont=dict(family="Courier New", size=11, color=sig_color),
-        name="Algorithmic Execution Signal Node"
-    ))
-
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
         paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=420,
@@ -167,7 +120,8 @@ with tab_desk:
         yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
     )
 
-    ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 2.50)
+    # Rectangular Order Block Shape Overlay
+    ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
     fig.add_hrect(
         y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
         fillcolor="rgba(255, 170, 0, 0.12)", line_color="#ffaa00", line_width=1,
@@ -177,11 +131,33 @@ with tab_desk:
     
     fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text=f"ENTRY LEVEL: {brain_data['entry_level']}")
     fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text=f"STOP LOSS LEVEL: {brain_data['stop_loss']}")
-    fig.add_hline(y=brain_data["take_profit"], line_dash="dash", line_color="#00ff99", line_width=1.5, annotation_text=f"TAKE PROFIT Target ({tp_ratio}R): {brain_data['take_profit']}")
 
-    # Blockless safe layout configurations
-    is_bullish_state = ("BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"])
-    green_zone_y0 = brain_data["entry_level"] if is_bullish_state else brain_data["take_profit"]
-    green_zone_y1 = brain_data["take_profit"] if is_bullish_state else brain_data["entry_level"]
-    red_zone_y0 = brain_data["stop_loss"] if is_bullish_state else brain_data["entry_level"]
+    # Shaded Position Tool Area
+    if "BUY" in brain_data["market_trend"] or "BULLISH" in brain_data["market_trend"]:
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["entry_level"] + (scale * 3.5), fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["stop_loss"], y1=brain_data["entry_level"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
+    else:
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"] - (scale * 3.5), y1=brain_data["entry_level"], fillcolor="rgba(0, 255, 153, 0.15)", line_width=0)
+        fig.add_shape(type="rect", x0="M-3", x1="Live", y0=brain_data["entry_level"], y1=brain_data["stop_loss"], fillcolor="rgba(255, 51, 102, 0.15)", line_width=0)
 
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Active running positions matrix table
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 📋 Active Open Position Matrix")
+    positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
+    st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
+
+    # Manual input routing gateway panel
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 🔥 Order Entry Gateway Router")
+    o_c1, o_c2 = st.columns(2)
+    order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
+    entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
+    calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
+    st.info(f"🧬 **Risk Sizing recommendation Matrix:** Lot size volume calculated at `{calculated_lots} Lots`")
+    if brain_data["rsi_filter_block"]: st.error("⚠️ ORDER ROUTER MUTED BY STRATEGY RSI LIMITS")
+
+    if st.button("🚀 DISPATCH ORDER MATRIX TO LIVE NODE", type="primary", use_container_width=True, disabled=brain_data["rsi_filter_block"]):
+        payload_packet = {}
+        payload_packet["symbol"] = str(symbol_choice)
