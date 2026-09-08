@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
@@ -9,12 +11,13 @@ st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="�
 # Premium deep dark institutional custom responsive styling wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Initialization fields
+# Persistent session state initialization rules
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "user_db" not in st.session_state: st.session_state.user_db = {"martins": "helix2026"}
+if "user_db" not in st.session_state:
+    st.session_state.user_db = {"martins": "helix2026"}
 
 # ==========================================
 # --- 1. LOGIN & REGISTRATION SECURITY GATEWAY ---
@@ -59,7 +62,7 @@ else:
     st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
     st.markdown("---")
 
-    # Sidebar inputs (Requirement 2)
+    # Sidebar inputs
     symbol_choice = st.sidebar.selectbox("Choose Target Instrument Asset", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
     st.sidebar.markdown("---")
     st.sidebar.header("🏢 Multi-Broker Gateway")
@@ -121,7 +124,7 @@ else:
         st.markdown(f"**Trend Engine Target:** :{trend_color}[{brain_data['market_trend']}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
         st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data['rsi']:.2f}` | State Matrix Boundary: `[{brain_data['rsi_status']}]`")
         
-        # Telemetry Display Matrix (Requirement 3, 5)
+        # Telemetry Display Matrix
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
         pm_c1, pm_c2, pm_c3 = st.columns(3)
@@ -129,7 +132,7 @@ else:
         pm_c2.metric(label="VALIDATED ORDER BLOCK [15M Frame]", value=f"${brain_data['ob_zone']:.2f}", delta="Premium Candlestick Zone Highlighted", delta_color="inverse")
         pm_c3.metric(label="PROTECTIVE STOP LOSS [15M Frame]", value=f"${brain_data['stop_loss']:.2f}", delta="Risk Floor Level Locked", delta_color="off")
 
-        # Active cross-asset running position table matrix spreadsheet (Requirement 3)
+        # Active open position tracking dataframe table
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### 📋 Active Open Position Matrix (Cross-Asset Multi-Broker Streams)")
         positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
@@ -144,4 +147,3 @@ else:
         calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
         st.info(f"🧬 **Risk Sizing Recommendation:** Baseline hard-locked safety recommendation calculated at `{calculated_lots} Lots`")
         
-        if brain_data["rsi_filter_block"]: 
