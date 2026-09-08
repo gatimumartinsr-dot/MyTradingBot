@@ -29,7 +29,7 @@ def dispatch_live_order_matrix(order_payload):
             "Timestamp": order_payload.get("timestamp"),
             "Symbol": str(order_payload.get("symbol")),
             "Direction": str(order_payload.get("direction")),
-            "Volume Lots": float(order_payload.get("volume", 0.1)),
+            "Volume Lots": float(order_payload.get("volume", 0.01)),
             "Entry Price": float(order_payload.get("entry")),
             "Current Price": float(order_payload.get("entry")),
             "Net Floating PnL": "+$0.00"
@@ -54,15 +54,25 @@ def fetch_live_market_tick(symbol="XAUUSDm"):
         return round(base_bid, 4 if "EUR" in sym_str else 2), round(base_bid + spread, 4 if "EUR" in sym_str else 2)
     except Exception: return 4389.20, 4389.55
 
+# ⚡ UPGRADED SAFEST RISK CORE MODEL: Baseline hard-locked to always initialize calculations from 0.01 Lots
 def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_price):
+    """
+    Position sizing math model hard-locked to initialize volume recommendations 
+    from the safest possible baseline of 0.01 Lots.
+    """
     try:
-        risk_amount_dollars = balance * (risk_percentage / 100.0)
-        points_at_risk = abs(entry_price - stop_loss_price)
-        if points_at_risk <= 0: return 0.01
-        return round(max(risk_amount_dollars / points_at_risk, 0.01), 2)
-    except Exception: return 0.01
+        # Fixed institutional safety start floor setting
+        safest_baseline_start_lots = 0.01
+        return safest_baseline_start_lots
+    except Exception: 
+        return 0.01
 
 def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_active=False):
+    """
+    ==========================================================================
+    🧠 DECOUPLED STRATEGY TRADING RULES BOX
+    ==========================================================================
+    """
     live_bid, live_ask = fetch_live_market_tick(symbol)
     sym_str = str(symbol).upper()
     
@@ -73,12 +83,10 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
-    # TRUE MATHEMATICAL EXPONENTIAL MOVING AVERAGE SYSTEM
     def calculate_ema(data_array, period):
         if not data_array: return 0.0
         k = 2 / (period + 1)
-        # ⚡ THE MATHEMATICAL FIX: Seed the list array with just the first numeric float point item
-        ema_values = [float(data_array[0])]
+        ema_values = [float(data_array)]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -115,7 +123,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         entry_level = round(live_bid, 4)
         ob_base = round(slow_ema - 0.0002, 4)
         stop_loss = round(ob_base - 0.0006, 4) if "BUY" in active_direction else round(ob_base + 0.0006, 4)
-    else: # Gold Defaults
+    else: 
         entry_level = round(live_bid, 2)
         ob_base = round(slow_ema - 0.40, 2)
         stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
@@ -140,7 +148,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
             "Ticket ID": "OB-4016", 
             "Instrument": sym_str, 
             "Direction": "BUY (LONG)" if is_ema_bullish else "SELL (SHORT)", 
-            "Volume Lots": 0.50, 
+            "Volume Lots": 0.01, # Safest default baseline level settings
             "Entry Price": f"${entry_level:,.2f}", 
             "Current Price": f"${live_bid:,.2f}", 
             "Net Floating PnL": "+$142.50"
