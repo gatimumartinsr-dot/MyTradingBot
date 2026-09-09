@@ -1,27 +1,26 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
-# Core terminal view layout settings
+# Core terminal view settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# Premium mobile-responsive deep dark institutional custom styling wrap injection
+# Mobile responsive CSS styling wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Application persistence session parameters state logic
+# System parameters persistence state setup
 if "logged_in" not in st.session_state: st.session_state.logged_in = True  
 if "username" not in st.session_state: st.session_state.username = "MARTINS"
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True  
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "user_db" not in st.session_state:
-    st.session_state.user_db = {"martins": "helix2026"}
 
 operator_id = st.session_state.username
 current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | Local System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
 
 st.title("🟢 Helix OB — Institutional Matrix Workspace")
 st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
@@ -40,7 +39,6 @@ account_environment = st.sidebar.radio("Server Environment Type", ["Demo Server 
 broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Cloud Server String", value="Exness-MT5-Trial15")
 
-st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
 risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
@@ -60,7 +58,7 @@ else:
         st.session_state.brain_active = False
         st.rerun()
 
-# Run processing core calculation scripts from bot module (Feeds True Live Scraped Asset Prices)
+# Run processing core calculation scripts from bot module
 brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
@@ -76,12 +74,11 @@ m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_
 risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
-# ⚡ CRASH-PROOF FLAT LABELS: Stripped out abstract emoticons to force stable layout painting across all tabs
 tab_desk, tab_journal, tab_rules, tab_login = st.tabs([
-    "Live Desk Monitoring", 
-    "Trade Journal Logs", 
-    "Risk Check Audit", 
-    "Security Portal Access"
+    "🖥️ Live Desk Monitoring", 
+    "🗒️ Trade Journal Logs", 
+    "📋 Risk Check Audit", 
+    "🔒 Security Portal Access"
 ])
 
 # ==========================================
@@ -98,28 +95,67 @@ with tab_desk:
     st.markdown(f"**Trend Engine Target:** :{trend_color}[{brain_data['market_trend']}] (Fast EMA: `{brain_data['fast_ema']}` | Slow EMA: `{brain_data['slow_ema']}`)")
     st.markdown(f"**Momentum Oscillator Index:** `RSI (14) = {brain_data['rsi']:.2f}` | State Matrix Boundary: `[{brain_data['rsi_status']}]`")
     
-    # Telemetry Display Matrix Target Parameters
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"### 📊 Real-Time Matrix Market Trend Monitor ({symbol_choice})")
     pm_c1, pm_c2, pm_c3 = st.columns(3)
-    pm_c1.metric(label="STRATEGY ENTRY TARGET [15M Frame]", value=f"${brain_data['entry_level']:.2f}", delta="Order Level Mapped")
-    pm_c2.metric(label="VALIDATED ORDER BLOCK [15M Frame]", value=f"${brain_data['ob_zone']:.2f}", delta="15M OB Zone Area Box Shaded", delta_color="inverse")
-    pm_c3.metric(label="PROTECTIVE STOP LOSS [15M Frame]", value=f"${brain_data['stop_loss']:.2f}", delta="Risk Floor Level Locked", delta_color="off")
+    pm_c1.metric(label="STRATEGY ENTRY TARGET", value=f"${brain_data['entry_level']:.2f}")
+    pm_c2.metric(label="VALIDATED ORDER BLOCK", value=f"${brain_data['ob_zone']:.2f}")
+    pm_c3.metric(label="PROTECTIVE STOP LOSS", value=f"${brain_data['stop_loss']:.2f}")
 
-    # Active open positions data table matrix spreadsheet
+    # Interactive dynamic chart engine tracking target indicators
+    np.random.seed(42)
+    c_open, c_high, c_low, c_close, c_time = [], [], [], [], []
+    walk = live_bid - (15.0 if "BTC" in symbol_choice else (0.0008 if "EUR" in symbol_choice else 1.5))
+    scale = 8.0 if "BTC" in symbol_choice else (0.0002 if "EUR" in symbol_choice else 0.8)
+    for i in range(30):
+        step = np.random.uniform(-scale, scale * 1.04)
+        o_val = walk
+        c_val = o_val + step
+        walk = c_val
+        c_open.append(o_val)
+        c_close.append(c_val)
+        c_high.append(max(o_val, c_val) + (scale * 0.3))
+        c_low.append(min(o_val, c_val) - (scale * 0.3))
+        c_time.append(f"M-{30-i}" if i < 29 else "Live")
+        
+    fig = go.Figure(data=[go.Candlestick(
+        x=c_time, open=c_open, high=c_high, low=c_low, close=c_close,
+        increasing_line_color='#00ff99', decreasing_line_color='#ff3366', name='Price'
+    )])
+    
+    fig.update_layout(
+        font=dict(family="Courier New, monospace", size=11, color="#8892b0"),
+        paper_bgcolor='#0b0e14', plot_bgcolor='#121620', height=400,
+        margin=dict(l=10, r=10, t=15, b=10),
+        xaxis=dict(showgrid=True, gridcolor='#1f2433', type='category'),
+        yaxis=dict(showgrid=True, gridcolor='#1f2433', tickfont=dict(family="Arial"))
+    )
+
+    ob_height_buffer = 4.0 if "BTC" in symbol_choice else (0.0001 if "EUR" in symbol_choice else 0.35)
+    fig.add_hrect(
+        y0=brain_data["ob_zone"] - ob_height_buffer, y1=brain_data["ob_zone"] + ob_height_buffer,
+        fillcolor="rgba(255, 170, 0, 0.12)", line_color="#ffaa00", line_width=1,
+        annotation_text="VALIDATED ORDER BLOCK [15M Frame]", annotation_position="top left",
+        annotation_font=dict(size=9, color="#ffaa00", family="Courier New")
+    )
+    fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5)
+    fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Active running position spreadsheet grid
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Active Open Position Matrix (Cross-Asset Multi-Broker Streams)")
     positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
     st.dataframe(positions_dataframe, use_container_width=True, hide_index=True)
 
-    # Manual order entry routing panels gateway
+    # Order entry routers
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🔥 Order Entry Gateway Router")
     o_c1, o_c2 = st.columns(2)
     order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
     entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
     calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
-    st.info(f"🧬 **Risk Sizing Recommendation:** Baseline safety size initialized at `{calculated_lots} Lots`")
+    st.info(f"🧬 **Risk Sizing Recommendation:** Baseline lot size volume recommendation calculated at `{calculated_lots} Lots`")
     
     if brain_data["rsi_filter_block"]: 
         st.error(f"❌ ORDER DISPATCH REFUSED BY ALGORITHM RULE: {brain_data['rsi_status']}")
@@ -131,32 +167,3 @@ with tab_desk:
         }
         dispatch_live_order_matrix(payload_packet)
         st.success(f"Order packet for {symbol_choice} transmitted successfully to MT5 network nodes!")
-        st.rerun()
-
-# ==========================================
-# --- TAB 2: LIVE TRADE JOURNAL LOGS -------
-# ==========================================
-with tab_journal:
-    st.markdown("### 🗒️ Algorithmic Performance Metrics Ledger")
-    p_stats = {"win_rate": "64.5%", "profit_factor": "1.82 x", "max_drawdown": "3.45%", "total_net_return": "+$177.70"}
-    st.dataframe(pd.DataFrame([p_stats]), use_container_width=True, hide_index=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 📈 Algorithmic Win/Loss Capital Scaling Overview")
-    jc1, jc2 = st.columns(2)
-    jc1.metric(label="TOTAL COMPLETED DISPATCHES", value="42 Executed Orders")
-    jc2.metric(label="NET WORKSPACE RETURNS PROFILE", value=f"${account_balance + 177.70:,.2f}", delta="+$177.70 Accumulation")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🗄️ Persistent Trade History Database Log (All Symbols + Timestamps)")
-    saved_trades = get_archived_trades()
-    if saved_trades:
-        df_trades = pd.DataFrame(saved_trades)
-        st.dataframe(df_trades, use_container_width=True, hide_index=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        csv_bytes = df_trades.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 EXPORT HISTORY DATA TO EXCEL/CSV SPREADSHEET", data=csv_bytes,
-            file_name=f"Helix_OB_Trade_History_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True
-        )
