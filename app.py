@@ -12,46 +12,46 @@ st.set_page_config(page_title="Helix OB Global Portal", layout="wide", page_icon
 # Premium deep dark institutional custom theme wrapper injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# High-frequency multi-tenant session storage networks memory initialization
+# Protected Multi-Tenant session memory allocation networks
 if "saas_user_db" not in st.session_state:
-    st.session_state.saas_user_db = {"martins": "helix2026"}
+    st.session_state["saas_user_db"] = {"martins": "helix2026"}
 
 if "saas_trades_db" not in st.session_state:
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.saas_trades_db = [
-        {"Transaction ID": "TX-9931", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 2514.20, "Current Real Market Price": 2516.50, "Net Floating PnL Balance": "+$23.00"},
-        {"Transaction ID": "TX-8824", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 56450.00, "Current Real Market Price": 56410.00, "Net Floating PnL Balance": "+$200.00"}
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state["saas_trades_db"] = [
+        {"Transaction ID": "TX-9931", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time_str, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 2514.20, "Current Real Market Price": 2516.50, "Net Floating PnL Balance": "+$23.00"},
+        {"Transaction ID": "TX-8824", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time_str, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 56450.00, "Current Real Market Price": 56410.00, "Net Floating PnL Balance": "+$200.00"}
     ]
 
-if "logged_in_status_flag" not in st.session_state: st.session_state.logged_in_status_flag = False
-if "saas_auth_username" not in st.session_state: st.session_state.saas_auth_username = ""
-if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
-if "brain_active" not in st.session_state: st.session_state.brain_active = False
+if "logged_in_status_flag" not in st.session_state: st.session_state["logged_in_status_flag"] = False
+if "saas_auth_username" not in st.session_state: st.session_state["saas_auth_username"] = ""
+if "gateway_connected" not in st.session_state: st.session_state["gateway_connected"] = False
+if "brain_active" not in st.session_state: st.session_state["brain_active"] = False
 
 # ===================================================
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
 # ===================================================
 def verify_user_authentication(username, password):
     u_clean = str(username).strip().lower()
-    return st.session_state.saas_user_db.get(u_clean) == str(password).strip()
+    return st.session_state["saas_user_db"].get(u_clean) == str(password).strip()
 
 def register_new_user_profile(username, password):
     u_clean = str(username).strip().lower()
     if not u_clean or not password: return False
-    if u_clean in st.session_state.saas_user_db: return False
-    st.session_state.saas_user_db[u_clean] = str(password).strip()
+    if u_clean in st.session_state["saas_user_db"]: return False
+    st.session_state["saas_user_db"][u_clean] = str(password).strip()
     return True
 
 def get_archived_trades(username=None):
     if username:
-        return [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
-    return st.session_state.saas_trades_db
+        return [t for t in st.session_state["saas_trades_db"] if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
+    return st.session_state["saas_trades_db"]
 
 def clear_trade_database(username=None):
     if username:
-        st.session_state.saas_trades_db = [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() != str(username).lower()]
+        st.session_state["saas_trades_db"] = [t for t in st.session_state["saas_trades_db"] if str(t.get("Operator Namespace", "")).lower() != str(username).lower()]
     else:
-        st.session_state.saas_trades_db = []
+        st.session_state["saas_trades_db"] = []
     return True
 
 def dispatch_live_order_matrix(order_payload):
@@ -66,7 +66,7 @@ def dispatch_live_order_matrix(order_payload):
         "Current Real Market Price": float(order_payload.get("entry")),
         "Net Floating PnL Balance": "+$0.00"
     }
-    st.session_state.saas_trades_db.append(new_row)
+    st.session_state["saas_trades_db"].append(new_row)
     return True
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
@@ -126,7 +126,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_minutes_to_news = random.randint(35, 120)
+    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -148,16 +148,27 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ ENTERPRISE SINGLE-ROW INJECTION: Secure array literal mapping to prevent structural compile halts
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")).upper() else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")).upper() else eur_bid)
             sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")).upper() else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
-            positions_matrix.append({"Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""), "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${float(trade.get('Entry Execution Price', 0.0)):,.2f}", "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"})
+            positions_matrix.append({
+                "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
+                "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
+                "Instrument Asset": trade.get("Symbol Asset", symbol), 
+                "Direction Matrix": trade.get("Direction Target", ""),
+                "Volume Lots": trade.get("Volume Lots", 0.01), 
+                "Entry Price": f"${float(trade.get('Entry Execution Price', 0.0)):,.2f}",
+                "Current Price": f"${current_asset_price:,.2f}", 
+                "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+            })
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
-        positions_matrix = [{"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"}, {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}]
+        positions_matrix = [
+            {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
+            {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}
+        ]
         
     if simulated_minutes_to_news <= 30:
         rsi_filter_block = True
