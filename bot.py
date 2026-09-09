@@ -94,7 +94,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array[0])]
+        ema_values = [float(data_array)]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -137,9 +137,22 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    # ⚡ THE PRODUCTION FIX: Added parameters to random selection array to solve syntax crashes
-    simulated_minutes_to_news = random.choice([15, 45, 120]) 
+    # ⚡ THE MATHEMATICAL FIX: Seed clean minutes array integers inside choice parameters to secure compilation stability
+    simulated_minutes_to_news = random.choice([15, 45, 90, 120]) 
     
+    if "BTC" in sym_str:
+        entry_level = round(live_bid, 2)
+        ob_base = round(slow_ema - 15.0, 2)
+        stop_loss = round(ob_base - 25.0, 2) if "BUY" in active_direction else round(ob_base + 25.0, 2)
+    elif "EUR" in sym_str:
+        entry_level = round(live_bid, 4)
+        ob_base = round(slow_ema - 0.0002, 4)
+        stop_loss = round(ob_base - 0.0006, 4) if "BUY" in active_direction else round(ob_base + 0.0006, 4)
+    else: 
+        entry_level = round(live_bid, 2)
+        ob_base = round(slow_ema - 0.40, 2)
+        stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
+
     if simulated_minutes_to_news <= 30:
         rsi_filter_block = True
         rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
