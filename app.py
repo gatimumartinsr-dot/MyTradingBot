@@ -13,13 +13,13 @@ from bot import (
     register_new_user_profile
 )
 
-# Core workspace layout settings
+# Workspace layout geometry configuration settings
 st.set_page_config(page_title="Helix SaaS Terminal", layout="wide", page_icon="🟢")
 
-# Premium high-contrast institutional dark styling injection
+# Premium mobile-responsive deep dark styling wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Cloud session multi-tenant states initialization
+# Continuous cloud multi-tenant session parameters state initialization
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
@@ -61,7 +61,7 @@ if not st.session_state.logged_in:
 else:
     # Authenticated Multi-User Active Dashboard Workspace Frame
     current_user = st.session_state.username
-    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Context: <b>{current_user.upper()}</b> | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Namespace Context: <b>{current_user.upper()}</b> | Live Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
     
     # Sidebar control inputs panel matrix
     st.sidebar.header("Market Asset Settings")
@@ -89,10 +89,10 @@ else:
         if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
             st.session_state.brain_active = True
             st.rerun()
-    else:
-        if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
-            st.session_state.brain_active = False
-            st.rerun()
+else:
+    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
+        st.session_state.brain_active = False
+        st.rerun()
 
     # Pass computations to bot module matching current user namespace parameters
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, current_user)
@@ -108,7 +108,7 @@ else:
     risk_dollars = account_balance * (risk_percentage / 100.0)
     m_c4.metric(label="RISK ALLOCATION SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Risk Layer")
 
-    # Crash-proof flat layout tab text strings
+    # Crash-proof flat text layout tab text strings
     tab_desk, tab_journal, tab_rules = st.tabs([
         "Live Trading Desk", 
         "Personal Journal Logs", 
@@ -167,5 +167,3 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### Active Open Position Matrix")
-        st.dataframe(pd.DataFrame(brain_data["positions_matrix"]), use_container_width=True, hide_index=True)
-
