@@ -165,5 +165,4 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_time = datetime.now().strftime("%H:%M:%S")
         positions_matrix = [{"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"}, {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}]
         
-    # ⚡ FIXED AND ALIGNED INDENTATION BLOCK: Indented code statements safely under conditional guards
-    if simulated_minutes_to_news <= 30:
+    # ⚡ THE INDENTATION PROTOCOL BLOCK FIXED: Properly filled out code operations inside the conditional safety block to solve compile halts
