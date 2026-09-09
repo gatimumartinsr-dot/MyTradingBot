@@ -155,7 +155,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ EXPLICIT FLAT MAPPING: Packed array assignments tightly to avoid multiline syntax loops completely
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")).upper() else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")).upper() else eur_bid)
@@ -166,4 +165,5 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_time = datetime.now().strftime("%H:%M:%S")
         positions_matrix = [{"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"}, {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}]
         
+    # ⚡ FIXED AND ALIGNED INDENTATION BLOCK: Indented code statements safely under conditional guards
     if simulated_minutes_to_news <= 30:
