@@ -3,114 +3,66 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import random
-import os
-import json
-import urllib.request
 from datetime import datetime
 
 # ===================================================
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
 # ===================================================
-# Incrementing the storage version cluster keys to force an unconditional database reset
-STORAGE_DATA_V9 = "trades_db_matrix_v9.json"
-STORAGE_AUTH_V9 = "users_db_auth_v9.json"
 
-def init_dbs():
-    try:
-        if not os.path.exists(STORAGE_DATA_V9):
-            with open(STORAGE_DATA_V9, "w") as f: json.dump([], f)
-        if not os.path.exists(STORAGE_AUTH_V9):
-            with open(STORAGE_AUTH_V9, "w") as f: json.dump({"martins": "helix2026"}, f)
-    except Exception:
-        pass
+# Network memory mock database system initializer
+if "saas_user_db" not in st.session_state:
+    st.session_state.saas_user_db = {"martins": "helix2026"}
+
+if "saas_trades_db" not in st.session_state:
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state.saas_trades_db = [
+        {"Transaction ID": "TX-9931", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 2514.20, "Current Real Market Price": 2516.50, "Net Floating PnL Balance": "+$23.00"},
+        {"Transaction ID": "TX-8824", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 56450.00, "Current Real Market Price": 56410.00, "Net Floating PnL Balance": "+$200.00"}
+    ]
 
 def verify_user_authentication(username, password):
-    init_dbs()
-    try:
-        if os.path.exists(STORAGE_AUTH_V9):
-            with open(STORAGE_AUTH_V9, "r") as f:
-                db = json.load(f)
-                return db.get(str(username).strip().lower()) == str(password).strip()
-        return str(username).strip().lower() == "martins" and str(password).strip() == "helix2026"
-    except Exception:
-        return False
+    u_clean = str(username).strip().lower()
+    return st.session_state.saas_user_db.get(u_clean) == str(password).strip()
 
 def register_new_user_profile(username, password):
-    init_dbs()
-    try:
-        u_clean = str(username).strip().lower()
-        if not u_clean or not password: return False
-        if os.path.exists(STORAGE_AUTH_V9):
-            with open(STORAGE_AUTH_V9, "r") as f: db = json.load(f)
-        else: db = {"martins": "helix2026"}
-        if u_clean in db: return False
-        db[u_clean] = str(password).strip()
-        with open(STORAGE_AUTH_V9, "w") as f: json.dump(db, f, indent=4)
-        return True
-    except Exception: return False
+    u_clean = str(username).strip().lower()
+    if not u_clean or not password: return False
+    if u_clean in st.session_state.saas_user_db: return False
+    st.session_state.saas_user_db[u_clean] = str(password).strip()
+    return True
 
 def get_archived_trades(username=None):
-    init_dbs()
-    try:
-        if os.path.exists(STORAGE_DATA_V9):
-            with open(STORAGE_DATA_V9, "r") as f: data = json.load(f)
-            if isinstance(data, list) and len(data) > 0:
-                if username:
-                    return [t for t in data if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
-                return data
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return [{"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"}, {"Transaction ID": "TX-8824", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 64365.00, "Current Real Market Price": 64350.00, "Net Floating PnL Balance": "+$110.40"}]
-    except Exception: 
-        return []
+    if username:
+        return [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
+    return st.session_state.saas_trades_db
 
 def clear_trade_database(username=None):
-    init_dbs()
-    try:
-        with open(STORAGE_DATA_V9, "w") as f: json.dump([], f)
-        return True
-    except Exception: return False
+    if username:
+        st.session_state.saas_trades_db = [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() != str(username).lower()]
+    else:
+        st.session_state.saas_trades_db = []
+    return True
 
 def dispatch_live_order_matrix(order_payload):
-    init_dbs()
-    try:
-        trades = get_archived_trades()
-        new_row = {
-            "Transaction ID": f"TX-{random.randint(50000, 99999)}",
-            "Operator Namespace": str(order_payload.get("user", "public")),
-            "Date Time Stamp (Local)": str(order_payload.get("timestamp")),
-            "Symbol Asset": str(order_payload.get("symbol")),
-            "Direction Target": str(order_payload.get("direction")),
-            "Volume Lots": float(order_payload.get("volume", 0.01)),
-            "Entry Execution Price": float(order_payload.get("entry")),
-            "Current Real Market Price": float(order_payload.get("entry")),
-            "Net Floating PnL Balance": "+$0.00"
-        }
-        trades.append(new_row)
-        with open(STORAGE_DATA_V9, "w") as f: json.dump(trades, f, indent=4)
-        return True
-    except Exception: return False
+    new_row = {
+        "Transaction ID": f"TX-{random.randint(50000, 99999)}",
+        "Operator Namespace": str(order_payload.get("user", "public")),
+        "Date Time Stamp (Local)": str(order_payload.get("timestamp")),
+        "Symbol Asset": str(order_payload.get("symbol")),
+        "Direction Target": str(order_payload.get("direction")),
+        "Volume Lots": float(order_payload.get("volume", 0.01)),
+        "Entry Execution Price": float(order_payload.get("entry")),
+        "Current Real Market Price": float(order_payload.get("entry")),
+        "Net Floating PnL Balance": "+$0.00"
+    }
+    st.session_state.saas_trades_db.append(new_row)
+    return True
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
-    try:
-        sym_str = str(symbol).upper()
-        req = urllib.request.Request("https://finnhub.io", headers={'User-Agent': 'Mozilla/5.0'})
-        if "EUR" in sym_str:
-            req = urllib.request.Request("https://finnhub.io", headers={'User-Agent': 'Mozilla/5.0'})
-        elif "XAU" in sym_str:
-            req = urllib.request.Request("https://finnhub.io", headers={'User-Agent': 'Mozilla/5.0'})
-            
-        with urllib.request.urlopen(req, timeout=4) as response:
-            raw_data = json.loads(response.read().decode())
-            live_price = float(raw_data.get("c", 0))
-            
-        if live_price <= 0: raise ValueError()
-        spread = 4.50 if "BTC" in sym_str else (0.0002 if "EUR" in sym_str else 0.35)
-        return round(live_price, 4 if "EUR" in sym_str else 2), round(live_price + spread, 4 if "EUR" in sym_str else 2)
-    except Exception:
-        sym_str = str(symbol).upper()
-        if "BTC" in sym_str: return 64350.00, 64354.50
-        elif "EUR" in sym_str: return 1.1045, 1.1047
-        else: return 4389.20, 4389.55
+    sym_str = str(symbol).upper()
+    if "BTC" in sym_str: return 56420.00, 56424.50
+    elif "EUR" in sym_str: return 1.1045, 1.1047
+    else: return 2515.20, 2515.55
 
 def calculate_position_size(balance, risk_percentage, entry_price, stop_loss_price):
     return 0.01 
@@ -128,7 +80,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array)]
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -163,13 +115,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_daily_profit = 0.00  
-    max_daily_profit_target = 50.00
-    if simulated_daily_profit >= max_daily_profit_target:
-        rsi_filter_block = True
-        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
-        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
-
     simulated_minutes_to_news = random.randint(35, 120)
     
     if "BTC" in sym_str:
@@ -194,9 +139,38 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
-            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
-            sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
+            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")).lower() else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")).lower() else eur_bid)
+            sim_pnl = random.uniform(-5.0, 25.0) if "buy" in str(trade.get("Direction Target", "")).lower() else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
-            positions_matrix.append({"Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""), "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}", "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"})
+            positions_matrix.append({
+                "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
+                "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
+                "Instrument Asset": trade.get("Symbol Asset", symbol), 
+                "Direction Matrix": trade.get("Direction Target", ""),
+                "Volume Lots": trade.get("Volume Lots", 0.01), 
+                "Entry Price": f"${float(trade.get('Entry Execution Price', 0.0)):,.2f}",
+                "Current Price": f"${current_asset_price:,.2f}", 
+                "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+            })
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
+        positions_matrix = [
+            {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
+            {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}
+        ]
+        
+    if simulated_minutes_to_news <= 30:
+        rsi_filter_block = True
+        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
+        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
+
+    return {"live_bid": live_bid, "live_ask": live_ask, "fast_ema": fast_ema, "slow_ema": slow_ema, "rsi": rsi, "market_trend": market_trend, "rsi_status": rsi_status, "rsi_filter_block": rsi_filter_block, "entry_level": entry_level, "ob_zone": ob_base, "stop_loss": stop_loss, "positions_matrix": positions_matrix}
+
+# ===================================================
+# --- 🖥️ FRONTEND USER INTERFACE LAYOUT LAYER ------
+# ===================================================
+if "saas_auth_logged_in" not in st.session_state: st.session_state.saas_auth_logged_in = False
+if "saas_auth_username" not in st.session_state: st.session_state.saas_auth_username = ""
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
+if "brain_active" not in st.session_state: st.session_state.brain_active = False
+
