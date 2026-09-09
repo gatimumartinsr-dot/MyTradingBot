@@ -11,23 +11,23 @@ from datetime import datetime
 # ===================================================
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
 # ===================================================
-DATA_FILE_STORAGE = "trades_db_matrix_v7.json"
-AUTH_FILE_STORAGE = "users_db_auth_v7.json"
+STORAGE_DATA_V8 = "trades_db_matrix_v8.json"
+STORAGE_AUTH_V8 = "users_db_auth_v8.json"
 
 def init_dbs():
     try:
-        if not os.path.exists(DATA_FILE_STORAGE):
-            with open(DATA_FILE_STORAGE, "w") as f: json.dump([], f)
-        if not os.path.exists(AUTH_FILE_STORAGE):
-            with open(AUTH_FILE_STORAGE, "w") as f: json.dump({"martins": "helix2026"}, f)
+        if not os.path.exists(STORAGE_DATA_V8):
+            with open(STORAGE_DATA_V8, "w") as f: json.dump([], f)
+        if not os.path.exists(STORAGE_AUTH_V8):
+            with open(STORAGE_AUTH_V8, "w") as f: json.dump({"martins": "helix2026"}, f)
     except Exception:
         pass
 
 def verify_user_authentication(username, password):
     init_dbs()
     try:
-        if os.path.exists(AUTH_FILE_STORAGE):
-            with open(AUTH_FILE_STORAGE, "r") as f:
+        if os.path.exists(STORAGE_AUTH_V8):
+            with open(STORAGE_AUTH_V8, "r") as f:
                 db = json.load(f)
                 return db.get(str(username).strip().lower()) == str(password).strip()
         return str(username).strip().lower() == "martins" and str(password).strip() == "helix2026"
@@ -39,20 +39,20 @@ def register_new_user_profile(username, password):
     try:
         u_clean = str(username).strip().lower()
         if not u_clean or not password: return False
-        if os.path.exists(AUTH_FILE_STORAGE):
-            with open(AUTH_FILE_STORAGE, "r") as f: db = json.load(f)
+        if os.path.exists(STORAGE_AUTH_V8):
+            with open(STORAGE_AUTH_V8, "r") as f: db = json.load(f)
         else: db = {"martins": "helix2026"}
         if u_clean in db: return False
         db[u_clean] = str(password).strip()
-        with open(AUTH_FILE_STORAGE, "w") as f: json.dump(db, f, indent=4)
+        with open(STORAGE_AUTH_V8, "w") as f: json.dump(db, f, indent=4)
         return True
     except Exception: return False
 
 def get_archived_trades(username=None):
     init_dbs()
     try:
-        if os.path.exists(DATA_FILE_STORAGE):
-            with open(DATA_FILE_STORAGE, "r") as f: data = json.load(f)
+        if os.path.exists(STORAGE_DATA_V8):
+            with open(STORAGE_DATA_V8, "r") as f: data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
                 if username:
                     return [t for t in data if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
@@ -65,7 +65,7 @@ def get_archived_trades(username=None):
 def clear_trade_database(username=None):
     init_dbs()
     try:
-        with open(DATA_FILE_STORAGE, "w") as f: json.dump([], f)
+        with open(STORAGE_DATA_V8, "w") as f: json.dump([], f)
         return True
     except Exception: return False
 
@@ -85,7 +85,7 @@ def dispatch_live_order_matrix(order_payload):
             "Net Floating PnL Balance": "+$0.00"
         }
         trades.append(new_row)
-        with open(DATA_FILE_STORAGE, "w") as f: json.dump(trades, f, indent=4)
+        with open(STORAGE_DATA_V8, "w") as f: json.dump(trades, f, indent=4)
         return True
     except Exception: return False
 
