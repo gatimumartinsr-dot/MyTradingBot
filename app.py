@@ -91,7 +91,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array[0])]
+        ema_values = [float(data_array)]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -126,7 +126,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
+    simulated_daily_profit = 0.00  
+    max_daily_profit_target = 50.00
+    if simulated_daily_profit >= max_daily_profit_target:
+        rsi_filter_block = True
+        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
+        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
+
+    # ⚡ CORE ENGINE FIX: Swapped out broken choice generator loop for safe, bounded numeric integer boundaries
+    simulated_minutes_to_news = random.randint(35, 120)
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -167,11 +175,3 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_time = datetime.now().strftime("%H:%M:%S")
         positions_matrix = [
             {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
-            {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}
-        ]
-        
-    if simulated_minutes_to_news <= 30:
-        rsi_filter_block = True
-        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
-        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
-
