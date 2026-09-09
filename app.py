@@ -175,7 +175,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    simulated_minutes_to_news = random.choice([15, 45, 60, 120])
+    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -214,5 +214,5 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
             })
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
-        # ⚡ FIXED POSITIONS ARRAY: Hard-locked all closing square brackets securely
+        # ⚡ HARD FIXED BOUNDS: Closed square brackets securely to solve syntax runtime blocks
         positions_matrix = [
