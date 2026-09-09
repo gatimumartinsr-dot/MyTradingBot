@@ -92,7 +92,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
-    # ⚡ PERMANENT IT FIX: Explicitly target array index position [0] to secure math operations
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
         ema_values = [float(data_array[0])]
@@ -137,7 +136,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    simulated_minutes_to_news = random.choice([15, 45, 120]) 
+    # ⚡ THE PRODUCTION FIX: Seed integer array values within parameters to solve the compilation crash
+    simulated_minutes_to_news = random.choice([15, 45, 90, 120]) 
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
