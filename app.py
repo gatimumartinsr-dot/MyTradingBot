@@ -17,11 +17,9 @@ USER_DB_FILE = "users_db_auth.json"
 def init_dbs():
     try:
         if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w") as f:
-                json.dump([], f)
+            with open(DB_FILE, "w") as f: json.dump([], f)
         if not os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "w") as f:
-                json.dump({"martins": "helix2026"}, f)
+            with open(USER_DB_FILE, "w") as f: json.dump({"martins": "helix2026"}, f)
     except Exception:
         pass
 
@@ -190,11 +188,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         ob_base = round(slow_ema - 0.40, 2)
         stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
 
-    if simulated_minutes_to_news <= 30:
-        rsi_filter_block = True
-        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
-        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
-        
     raw_saved = get_archived_trades(username)
     positions_matrix = []
     
@@ -202,7 +195,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed and closed the bracket constraints properly
+    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed and closed parameters safely
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
@@ -215,3 +208,9 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
                 "Direction Matrix": trade.get("Direction Target", ""),
                 "Volume Lots": trade.get("Volume Lots", 0.01), 
                 "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
+                "Current Price": f"${current_asset_price:,.2f}", 
+                "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+            })
+    else:
+        current_time = datetime.now().strftime("%H:%M:%S")
+        positions_matrix = [
