@@ -13,13 +13,13 @@ from bot import (
     register_new_user_profile
 )
 
-# Core terminal workstation configuration settings
+# Core workspace layout settings
 st.set_page_config(page_title="Helix SaaS Terminal", layout="wide", page_icon="🟢")
 
-# Premium deep dark institutional custom responsive styling wrap injection
+# Premium high-contrast institutional dark styling injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Continuous cloud multi-tenant session parameters state initialization
+# Continuous cloud session architecture states initialization
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
@@ -59,7 +59,7 @@ if not st.session_state.logged_in:
                 else:
                     st.warning("Please specify valid alpha-numeric configuration characters.")
 else:
-    # Authenticated Active trading panel workspace terminal shell layout
+    # Authenticated User Space View Panel Container
     current_user = st.session_state.username
     st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Namespace Context: <b>{current_user.upper()}</b> | Live Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
     
@@ -100,7 +100,7 @@ else:
     live_ask = brain_data["live_ask"]
     spread_delta = round(abs(live_ask - live_bid), 4)
 
-    # Core parameters summary metrics header row block
+    # Core parameters metrics header row block
     m_c1, m_c2, m_c3, m_c4 = st.columns(4)
     m_c1.metric(label="ACCOUNT BALANCE CONTEXT", value=f"${account_balance:,.2f}")
     m_c2.metric(label="LIVE SCALPED BID", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
@@ -167,3 +167,5 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### Active Open Position Matrix")
+        st.dataframe(pd.DataFrame(brain_data["positions_matrix"]), use_container_width=True, hide_index=True)
+
