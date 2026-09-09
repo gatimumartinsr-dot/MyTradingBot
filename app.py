@@ -13,13 +13,13 @@ from bot import (
     register_new_user_profile
 )
 
-# 1. Framework settings
+# Core terminal workstation configuration settings
 st.set_page_config(page_title="Helix SaaS Terminal", layout="wide", page_icon="🟢")
 
-# Mobile responsive premium dark theme injection
+# Premium deep dark institutional custom responsive styling wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Session initialization
+# Continuous cloud multi-tenant session parameters state initialization
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
@@ -57,13 +57,13 @@ if not st.session_state.logged_in:
                     else:
                         st.error("Username key is already taken by another active workspace user.")
                 else:
-                    st.warning("Please specify valid characters.")
+                    st.warning("Please specify valid alpha-numeric configuration characters.")
 else:
-    # Authenticated dashboard workspace layout
+    # Authenticated Active trading panel workspace terminal shell layout
     current_user = st.session_state.username
-    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Context: <b>{current_user.upper()}</b> | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Namespace Context: <b>{current_user.upper()}</b> | Live Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
     
-    # Sidebar control matrix
+    # Sidebar control inputs panel matrix
     st.sidebar.header("Market Asset Settings")
     symbol_choice = st.sidebar.selectbox("Tracked Target Instrument", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
     
@@ -89,26 +89,26 @@ else:
         if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
             st.session_state.brain_active = True
             st.rerun()
-else:
-    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
-        st.session_state.brain_active = False
-        st.rerun()
+    else:
+        if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
+            st.session_state.brain_active = False
+            st.rerun()
 
-    # Pass computations to bot module matching current user namespace
+    # Pass computations to bot module matching current user namespace parameters
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, current_user)
     live_bid = brain_data["live_bid"]
     live_ask = brain_data["live_ask"]
     spread_delta = round(abs(live_ask - live_bid), 4)
 
-    # Header metric cards
+    # Core parameters summary metrics header row block
     m_c1, m_c2, m_c3, m_c4 = st.columns(4)
     m_c1.metric(label="ACCOUNT BALANCE CONTEXT", value=f"${account_balance:,.2f}")
-    m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
-    m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_choice else f"${live_ask:,.2f}")
+    m_c2.metric(label="LIVE SCALPED BID", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
+    m_c3.metric(label="LIVE SCALPED ASK", value=f"${live_ask:,.4f}" if "EUR" in symbol_choice else f"${live_ask:,.2f}")
     risk_dollars = account_balance * (risk_percentage / 100.0)
     m_c4.metric(label="RISK ALLOCATION SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Risk Layer")
 
-    # Crash-proof flat text tab strings
+    # Crash-proof flat layout tab text strings
     tab_desk, tab_journal, tab_rules = st.tabs([
         "Live Trading Desk", 
         "Personal Journal Logs", 
@@ -120,7 +120,7 @@ else:
         tc1, tc2 = st.columns(2)
         trend_color = "green" if "BULLISH" in brain_data["market_trend"] else "red"
         tc1.markdown(f"**Trend Evaluation Target:** :{trend_color}[{brain_data['market_trend']}]")
-        tc2.markdown(f"**Volatility Spread Delta:** `{spread_delta} Points`")
+        tc2.markdown(f"**Volatility Spread Delta:** `{spread_delta} Points` (Max Allowable Ceiling Buffer: Safe)")
         st.markdown(f"**Oscillator Boundaries:** `RSI (14) = {brain_data['rsi']:.2f}` | Strategy Status: `[{brain_data['rsi_status']}]`")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -167,8 +167,3 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("### Active Open Position Matrix")
-        st.dataframe(pd.DataFrame(brain_data["positions_matrix"]), use_container_width=True, hide_index=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("### Manual Order Dispatch Gateway Router")
-        o_c1, o_c2 = st.columns(2)
