@@ -197,7 +197,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ SHIELD PROTECTION MATRIX: Explicitly sealed array list closures perfectly
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
@@ -215,4 +214,5 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
             })
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
+        # ⚡ FIXED POSITIONS ARRAY: Hard-locked all closing square brackets securely
         positions_matrix = [
