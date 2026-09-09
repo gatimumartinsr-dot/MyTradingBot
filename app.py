@@ -55,7 +55,7 @@ if not st.session_state.logged_in:
                     if register_new_user_profile(user_input, pass_input):
                         st.success("Account profile compiled successfully! Please select 'Sign In' to connect.")
                     else:
-                        st.error("Username key is already taken by another active workspace user.")
+                        st.error("Username key is already taken by another active active workspace user.")
                 else:
                     st.warning("Please specify valid alpha-numeric configuration characters.")
 else:
@@ -94,7 +94,7 @@ else:
             st.session_state.brain_active = False
             st.rerun()
 
-    # Pass computations to bot module matching current user namespace (Requirement 3, 4)
+    # Pass computations to bot module matching current user namespace
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, current_user)
     live_bid = brain_data["live_bid"]
     live_ask = brain_data["live_ask"]
