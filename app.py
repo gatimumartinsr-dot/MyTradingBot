@@ -1,27 +1,26 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
 # Core terminal view layout settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
-# Premium mobile-responsive deep dark institutional styling inject
+# Premium mobile-responsive deep dark institutional custom styling wrap injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
 # Application persistence session parameters state logic
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "logged_in" not in st.session_state: st.session_state.logged_in = True  
 if "username" not in st.session_state: st.session_state.username = "MARTINS"
-if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
+if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True  
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "user_db" not in st.session_state:
-    st.session_state.user_db = {"martins": "helix2026"}
+if "user_db" not in st.session_state: st.session_state.user_db = {"martins": "helix2026"}
 
-# Active operational terminal shell layout parameters
 operator_id = st.session_state.username
 current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | Local System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
 
 st.title("🟢 Helix OB — Institutional Matrix Workspace")
 st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
@@ -40,12 +39,9 @@ account_environment = st.sidebar.radio("Server Environment Type", ["Demo Server 
 broker_account = st.sidebar.number_input("Account Login ID Number", value=474239881, step=1)
 broker_server = st.sidebar.text_input("Target MetaTrader 5 Cloud Server String", value="Exness-MT5-Trial15")
 
-if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
-    st.session_state.gateway_connected = True
-    st.sidebar.success(f"Linked securely to {broker_choice} MT5 cloud server!")
-
+st.sidebar.markdown("---")
 st.sidebar.header("⚙️ Risk Parameter Protocol")
-risk_percentage = st.sidebar.slider("Account Capital Risk (%)", 1.0, 10.0, 2.0, step=0.5)
+risk_percentage = st.sidebar.slider("Account Capital Allocation Risk (%)", 1.0, 10.0, 2.0, step=0.5)
 account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53)
 
 st.sidebar.markdown("---")
@@ -56,16 +52,14 @@ st.sidebar.markdown("---")
 st.sidebar.header("🧠 Cloud Hands-Free Mode")
 if not st.session_state.brain_active:
     if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
-        if not st.session_state.gateway_connected: st.sidebar.error("Aborted: Link Multi-Broker Gateway first!")
-        else:
-            st.session_state.brain_active = True
-            st.rerun()
+        st.session_state.brain_active = True
+        st.rerun()
 else:
     if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
         st.session_state.brain_active = False
         st.rerun()
 
-# Run processing core calculation scripts from bot module (Feeds Scraped Real Prices)
+# Run processing core calculation scripts from bot module (Feeds True Live Scraped Asset Prices)
 brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active)
 live_bid = brain_data["live_bid"]
 live_ask = brain_data["live_ask"]
@@ -73,7 +67,7 @@ active_spread_points = round(abs(live_ask - live_bid), 4)
 max_allowable_spread = 5.00 if "BTC" in symbol_choice else 0.50
 is_spread_breached = active_spread_points > max_allowable_spread
 
-# Core metrics header block row panel
+# Core metrics header row panel
 m_c1, m_c2, m_c3, m_c4 = st.columns(4)
 m_c1.metric(label="ACCOUNT AUDIT BALANCE", value=f"${account_balance:,.2f}")
 m_c2.metric(label="LIVE BID FEED", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
@@ -81,7 +75,13 @@ m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_
 risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
-tab_desk, tab_journal, tab_rules, tab_login = st.tabs(["🖥️ Real-Time Live Desk", "🗒️ Live Trade Journal Logs", "📋 System Check Rules Audit", "🔒 Portal Security Access"])
+# ⚡ UNBREAKABLE UNIFIED TAB DECLARATION: Clean text labels to prevent rendering conflicts
+tab_desk, tab_journal, tab_rules, tab_login = st.tabs([
+    "🖥️ Real-Time Live Desk", 
+    "🗒️ Live Trade Journal Logs", 
+    "📋 System Check Rules Audit", 
+    "🔒 Portal Security Access"
+])
 
 # ==========================================
 # --- TAB 1: REAL-TIME LIVE DESK ----------
@@ -105,7 +105,7 @@ with tab_desk:
     pm_c2.metric(label="VALIDATED ORDER BLOCK [15M Frame]", value=f"${brain_data['ob_zone']:.2f}", delta="15M OB Zone Area Box Shaded", delta_color="inverse")
     pm_c3.metric(label="PROTECTIVE STOP LOSS [15M Frame]", value=f"${brain_data['stop_loss']:.2f}", delta="Risk Floor Level Locked", delta_color="off")
 
-    # Active cross-asset running position table matrix spreadsheet
+    # Active open positions data table matrix spreadsheet
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Active Open Position Matrix (Cross-Asset Multi-Broker Streams)")
     positions_dataframe = pd.DataFrame(brain_data["positions_matrix"])
@@ -118,7 +118,7 @@ with tab_desk:
     order_direction = o_c1.radio("Order Strategy Direction Target", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
     entry_input = o_c2.number_input("Order Entry Target Price", value=live_bid, format="%.2f")
     calculated_lots = calculate_position_size(account_balance, risk_percentage, entry_input, brain_data["stop_loss"])
-    st.info(f"🧬 **Risk Sizing Recommendation:** Lot size volume calculated at `{calculated_lots} Lots` (Hardlocked safely at 0.01 base start values)")
+    st.info(f"🧬 **Risk Sizing Recommendation:** Baseline safety size initialized at `{calculated_lots} Lots`")
     
     if brain_data["rsi_filter_block"]: 
         st.error(f"❌ ORDER DISPATCH REFUSED BY ALGORITHM RULE: {brain_data['rsi_status']}")
@@ -155,3 +155,7 @@ with tab_journal:
         
         st.markdown("<br>", unsafe_allow_html=True)
         csv_bytes = df_trades.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 EXPORT HISTORY DATA TO EXCEL/CSV SPREADSHEET", data=csv_bytes,
+            file_name=f"Helix_OB_Trade_History_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True
+        )
