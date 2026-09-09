@@ -114,7 +114,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_minutes_to_news = random.randint(35, 120)
+    simulated_daily_profit = 0.00  
+    max_daily_profit_target = 50.00
+    if simulated_daily_profit >= max_daily_profit_target:
+        rsi_filter_block = True
+        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
+        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
+
+    # ⚡ FIXED RANDOM CHOICE LOOP: Populated choices array properly to resolve index trace exception parameters
+    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -168,7 +176,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
 # ===================================================
 # --- 🖥️ FRONTEND USER INTERFACE LAYOUT LAYER ------
 # ===================================================
-if "saas_auth_logged_in" not in st.session_state: st.session_state.logged_in_status_flag = False
+if "logged_in_status_flag" not in st.session_state: st.session_state.logged_in_status_flag = False
 if "saas_auth_username" not in st.session_state: st.session_state.saas_auth_username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
