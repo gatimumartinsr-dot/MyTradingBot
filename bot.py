@@ -21,7 +21,6 @@ def get_archived_trades():
                 if isinstance(data, list) and len(data) > 0:
                     return data
         
-        # ⚡ THE ARRRAY REPAIR MATRIX: Forces a clean default dictionary shape so app.py can map columns perfectly
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return [
             {"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"},
@@ -42,10 +41,6 @@ def dispatch_live_order_matrix(order_payload):
     init_db()
     try:
         trades = get_archived_trades()
-        # Filter out default filler rows before logging new physical manual dispatches
-        if len(trades) > 0 and trades[0]["Transaction ID"] == "TX-9931":
-            trades = []
-            
         new_row = {
             "Transaction ID": f"TX-{random.randint(50000, 99999)}",
             "Date Time Stamp (Local)": str(order_payload.get("timestamp")),
@@ -123,29 +118,32 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         market_trend = "BULLISH (UPTREND)" if is_ema_bullish else "BEARISH (DOWNTREND)"
         active_direction = "BUY LIMIT" if is_ema_bullish else "SELL LIMIT"
 
-    # RSI
+    # RSI Configuration
     rsi = round(random.uniform(25.0, 75.0), 2)
     rsi_status = "NEUTRAL"
     rsi_filter_block = False
+    
     if rsi >= 55.0:
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERBOUGHT REVERSAL CEILING"
         if "BUY" in active_direction: rsi_filter_block = True
     elif rsi <= 40.0:
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
-        
-    if "BTC" in sym_str:
-        entry_level = round(live_bid, 2)
-        ob_base = round(slow_ema - 15.0, 2)
-        stop_loss = round(ob_base - 25.0, 2) if "BUY" in active_direction else round(ob_base + 25.0, 2)
-    elif "EUR" in sym_str:
-        entry_level = round(live_bid, 4)
-        ob_base = round(slow_ema - 0.0002, 4)
-        stop_loss = round(ob_base - 0.0006, 4) if "BUY" in active_direction else round(ob_base + 0.0006, 4)
-    else: 
-        entry_level = round(live_bid, 2)
-        ob_base = round(slow_ema - 0.40, 2)
-        stop_loss = round(ob_base - 1.10, 2) if "BUY" in active_direction else round(ob_base + 1.10, 2)
+
+    simulated_daily_profit = 0.00  
+    max_daily_profit_target = 50.00
+    if simulated_daily_profit >= max_daily_profit_target:
+        rsi_filter_block = True
+        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
+        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
+
+    # ⚡ THE PRODUCTION FIX: Added parameters to random selection array to solve syntax crashes
+    simulated_minutes_to_news = random.choice([15, 45, 120]) 
+    
+    if simulated_minutes_to_news <= 30:
+        rsi_filter_block = True
+        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
+        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
         
     raw_saved = get_archived_trades()
     positions_matrix = []
@@ -159,14 +157,9 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
         pnl_sign = "+" if sim_pnl >= 0 else ""
         positions_matrix.append({
-            "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
-            "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
-            "Instrument Asset": trade.get("Symbol Asset", symbol), 
-            "Direction Matrix": trade.get("Direction Target", ""),
-            "Volume Lots": trade.get("Volume Lots", 0.01), 
-            "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
-            "Current Price": f"${current_asset_price:,.2f}", 
-            "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+            "Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""),
+            "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
+            "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
         })
     
     return {
