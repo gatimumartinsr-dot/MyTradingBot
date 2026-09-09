@@ -175,7 +175,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
+    simulated_minutes_to_news = random.choice([15, 45, 60, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -202,8 +202,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed dictionary structures cleanly
-    if raw_saved and len(raw_saved) > 0 and "Symbol Asset" in raw_saved[0]:
+    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed and closed the bracket constraints properly
+    if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
             sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
