@@ -10,36 +10,36 @@ from datetime import datetime
 
 # High-frequency network memory multi-tenant storage initializer
 if "saas_user_db" not in st.session_state:
-    st.session_state.saas_user_db = {"martins": "helix2026"}
+    st.saas_user_db = {"martins": "helix2026"}
 
 if "saas_trades_db" not in st.session_state:
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.saas_trades_db = [
+    st.saas_trades_db = [
         {"Transaction ID": "TX-9931", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 2514.20, "Current Real Market Price": 2516.50, "Net Floating PnL Balance": "+$23.00"},
         {"Transaction ID": "TX-8824", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 56450.00, "Current Real Market Price": 56410.00, "Net Floating PnL Balance": "+$200.00"}
     ]
 
 def verify_user_authentication(username, password):
     u_clean = str(username).strip().lower()
-    return st.session_state.saas_user_db.get(u_clean) == str(password).strip()
+    return st.saas_user_db.get(u_clean) == str(password).strip()
 
 def register_new_user_profile(username, password):
     u_clean = str(username).strip().lower()
     if not u_clean or not password: return False
-    if u_clean in st.session_state.saas_user_db: return False
-    st.session_state.saas_user_db[u_clean] = str(password).strip()
+    if u_clean in st.saas_user_db: return False
+    st.saas_user_db[u_clean] = str(password).strip()
     return True
 
 def get_archived_trades(username=None):
     if username:
-        return [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
-    return st.session_state.saas_trades_db
+        return [t for t in st.saas_trades_db if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
+    return st.saas_trades_db
 
 def clear_trade_database(username=None):
     if username:
-        st.session_state.saas_trades_db = [t for t in st.session_state.saas_trades_db if str(t.get("Operator Namespace", "")).lower() != str(username).lower()]
+        st.saas_trades_db = [t for t in st.saas_trades_db if str(t.get("Operator Namespace", "")).lower() != str(username).lower()]
     else:
-        st.session_state.saas_trades_db = []
+        st.saas_trades_db = []
     return True
 
 def dispatch_live_order_matrix(order_payload):
@@ -54,7 +54,7 @@ def dispatch_live_order_matrix(order_payload):
         "Current Real Market Price": float(order_payload.get("entry")),
         "Net Floating PnL Balance": "+$0.00"
     }
-    st.session_state.saas_trades_db.append(new_row)
+    st.saas_trades_db.append(new_row)
     return True
 
 def fetch_live_market_tick(symbol="XAUUSDm"):
@@ -79,7 +79,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array)]
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -121,8 +121,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    # ⚡ SEEDED RANDOM CHOICE MATRIX: Populated array sequence to solve internal choice index errors
-    simulated_minutes_to_news = random.choice([35, 45, 60, 90, 120])
+    # ⚡ SEEDED FIXED CHANGER: Passed concrete timeline options array to fix choice execution blocks completely
+    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
