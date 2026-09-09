@@ -11,23 +11,23 @@ from datetime import datetime
 # ===================================================
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
 # ===================================================
-DB_FILE = "trades_db_matrix_v6.json"
-USER_DB_FILE = "users_db_auth.json"
+DATA_FILE_STORAGE = "trades_db_matrix_v7.json"
+AUTH_FILE_STORAGE = "users_db_auth_v7.json"
 
 def init_dbs():
     try:
-        if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w") as f: json.dump([], f)
-        if not os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "w") as f: json.dump({"martins": "helix2026"}, f)
+        if not os.path.exists(DATA_FILE_STORAGE):
+            with open(DATA_FILE_STORAGE, "w") as f: json.dump([], f)
+        if not os.path.exists(AUTH_FILE_STORAGE):
+            with open(AUTH_FILE_STORAGE, "w") as f: json.dump({"martins": "helix2026"}, f)
     except Exception:
         pass
 
 def verify_user_authentication(username, password):
     init_dbs()
     try:
-        if os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "r") as f:
+        if os.path.exists(AUTH_FILE_STORAGE):
+            with open(AUTH_FILE_STORAGE, "r") as f:
                 db = json.load(f)
                 return db.get(str(username).strip().lower()) == str(password).strip()
         return str(username).strip().lower() == "martins" and str(password).strip() == "helix2026"
@@ -39,26 +39,25 @@ def register_new_user_profile(username, password):
     try:
         u_clean = str(username).strip().lower()
         if not u_clean or not password: return False
-        if os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "r") as f: db = json.load(f)
+        if os.path.exists(AUTH_FILE_STORAGE):
+            with open(AUTH_FILE_STORAGE, "r") as f: db = json.load(f)
         else: db = {"martins": "helix2026"}
         if u_clean in db: return False
         db[u_clean] = str(password).strip()
-        with open(USER_DB_FILE, "w") as f: json.dump(db, f, indent=4)
+        with open(AUTH_FILE_STORAGE, "w") as f: json.dump(db, f, indent=4)
         return True
     except Exception: return False
 
 def get_archived_trades(username=None):
     init_dbs()
     try:
-        if os.path.exists(DB_FILE):
-            with open(DB_FILE, "r") as f: data = json.load(f)
+        if os.path.exists(DATA_FILE_STORAGE):
+            with open(DATA_FILE_STORAGE, "r") as f: data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
                 if username:
                     return [t for t in data if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
                 return data
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # ⚡ ENTERPRISE ROW FLATTENING: Compressed fallback array list into a single explicit baseline to block server sync parsing bugs
         return [{"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"}, {"Transaction ID": "TX-8824", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 64365.00, "Current Real Market Price": 64350.00, "Net Floating PnL Balance": "+$110.40"}]
     except Exception: 
         return []
@@ -66,7 +65,7 @@ def get_archived_trades(username=None):
 def clear_trade_database(username=None):
     init_dbs()
     try:
-        with open(DB_FILE, "w") as f: json.dump([], f)
+        with open(DATA_FILE_STORAGE, "w") as f: json.dump([], f)
         return True
     except Exception: return False
 
@@ -86,7 +85,7 @@ def dispatch_live_order_matrix(order_payload):
             "Net Floating PnL Balance": "+$0.00"
         }
         trades.append(new_row)
-        with open(DB_FILE, "w") as f: json.dump(trades, f, indent=4)
+        with open(DATA_FILE_STORAGE, "w") as f: json.dump(trades, f, indent=4)
         return True
     except Exception: return False
 
