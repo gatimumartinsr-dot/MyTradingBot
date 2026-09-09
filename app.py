@@ -17,11 +17,9 @@ USER_DB_FILE = "users_db_auth.json"
 def init_dbs():
     try:
         if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w") as f:
-                json.dump([], f)
+            with open(DB_FILE, "w") as f: json.dump([], f)
         if not os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "w") as f:
-                json.dump({"martins": "helix2026"}, f)
+            with open(USER_DB_FILE, "w") as f: json.dump({"martins": "helix2026"}, f)
     except Exception:
         pass
 
@@ -57,9 +55,8 @@ def get_archived_trades(username=None):
             with open(DB_FILE, "r") as f: data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
                 if username:
-                    return [trade for trade in data if str(trade.get("Operator Namespace", "")).lower() == str(username).lower()]
+                    return [t for t in data if str(t.get("Operator Namespace", "")).lower() == str(username).lower()]
                 return data
-        
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return [
             {"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"},
@@ -197,22 +194,12 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
+    # ⚡ THE SINGLE ROW FLATTENING FIX: Unified database fallback row array directly onto a single baseline line to break formatting cache blocks
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
             sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
-            positions_matrix.append({
-                "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
-                "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
-                "Instrument Asset": trade.get("Symbol Asset", symbol), 
-                "Direction Matrix": trade.get("Direction Target", ""),
-                "Volume Lots": trade.get("Volume Lots", 0.01), 
-                "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
-                "Current Price": f"${current_asset_price:,.2f}", 
-                "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
-            })
+            positions_matrix.append({"Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""), "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}", "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"})
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
-        # ⚡ HARD LOCKED STRUCTURE: Added the exact missing closing square bracket to clean syntax compiling limits
-        positions_matrix = [
