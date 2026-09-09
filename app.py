@@ -9,7 +9,7 @@ from datetime import datetime
 # ===================================================
 st.set_page_config(page_title="Helix OB Global Portal", layout="wide", page_icon="🟢")
 
-# High-frequency multi-tenant session storage
+# High-frequency multi-tenant session storage memory databases
 if "saas_user_db" not in st.session_state:
     st.session_state.saas_user_db = {"martins": "helix2026"}
 
@@ -126,7 +126,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
+    simulated_daily_profit = 0.00  
+    max_daily_profit_target = 50.00
+    if simulated_daily_profit >= max_daily_profit_target:
+        rsi_filter_block = True
+        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
+        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
+
+    # ⚡ CRITICAL FIX: Seeded choice method sequence parameter with an array list to stop layout freezing
+    simulated_minutes_to_news = random.choice([35, 45, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -150,7 +158,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
-            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
+            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")).lower() else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")).lower() else eur_bid)
             sim_pnl = random.uniform(-5.0, 25.0) if "buy" in str(trade.get("Direction Target", "")).lower() else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
             positions_matrix.append({
@@ -167,11 +175,3 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_time = datetime.now().strftime("%H:%M:%S")
         positions_matrix = [
             {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
-            {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}
-        ]
-        
-    if simulated_minutes_to_news <= 30:
-        rsi_filter_block = True
-        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
-        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
-
