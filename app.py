@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 import random
 from datetime import datetime
 
@@ -9,7 +8,7 @@ from datetime import datetime
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
 # ===================================================
 
-# Network memory mock database system initializer
+# High-frequency network memory multi-tenant storage initializer
 if "saas_user_db" not in st.session_state:
     st.session_state.saas_user_db = {"martins": "helix2026"}
 
@@ -80,7 +79,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array[0])]
+        ema_values = [float(data_array)]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -169,7 +168,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
 # ===================================================
 # --- 🖥️ FRONTEND USER INTERFACE LAYOUT LAYER ------
 # ===================================================
-if "saas_auth_logged_in" not in st.session_state: st.session_state.saas_auth_logged_in = False
+if "saas_auth_logged_in" not in st.session_state: st.session_state.logged_in_status_flag = False
 if "saas_auth_username" not in st.session_state: st.session_state.saas_auth_username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
