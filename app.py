@@ -12,7 +12,7 @@ st.set_page_config(page_title="Helix OB Global Portal", layout="wide", page_icon
 # Premium deep dark institutional custom theme wrapper injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Protected Multi-Tenant session memory allocation networks
+# High-frequency multi-tenant session storage networks memory initialization
 if "saas_user_db" not in st.session_state:
     st.session_state["saas_user_db"] = {"martins": "helix2026"}
 
@@ -133,7 +133,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    # ⚡ CORE ENGINE FIX: Swapped out broken choice generator loop for safe, bounded numeric integer boundaries
     simulated_minutes_to_news = random.randint(35, 120)
     
     if "BTC" in sym_str:
@@ -156,22 +155,15 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
+    # ⚡ EXPLICIT FLAT MAPPING: Packed array assignments tightly to avoid multiline syntax loops completely
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")).upper() else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")).upper() else eur_bid)
             sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")).upper() else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
-            positions_matrix.append({
-                "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
-                "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
-                "Instrument Asset": trade.get("Symbol Asset", symbol), 
-                "Direction Matrix": trade.get("Direction Target", ""),
-                "Volume Lots": trade.get("Volume Lots", 0.01), 
-                "Entry Price": f"${float(trade.get('Entry Execution Price', 0.0)):,.2f}",
-                "Current Price": f"${current_asset_price:,.2f}", 
-                "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
-            })
+            positions_matrix.append({"Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""), "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${float(trade.get('Entry Execution Price', 0.0)):,.2f}", "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"})
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
-        positions_matrix = [
-            {"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
+        positions_matrix = [{"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"}, {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}]
+        
+    if simulated_minutes_to_news <= 30:
