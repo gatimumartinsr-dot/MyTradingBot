@@ -17,9 +17,11 @@ USER_DB_FILE = "users_db_auth.json"
 def init_dbs():
     try:
         if not os.path.exists(DB_FILE):
-            with open(DB_FILE, "w") as f: json.dump([], f)
+            with open(DB_FILE, "w") as f:
+                json.dump([], f)
         if not os.path.exists(USER_DB_FILE):
-            with open(USER_DB_FILE, "w") as f: json.dump({"martins": "helix2026"}, f)
+            with open(USER_DB_FILE, "w") as f:
+                json.dump({"martins": "helix2026"}, f)
     except Exception:
         pass
 
@@ -195,7 +197,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed and closed parameters safely
+    # ⚡ SHIELD PROTECTION MATRIX: Explicitly sealed array list closures perfectly
     if raw_saved and len(raw_saved) > 0:
         for trade in raw_saved:
             current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
