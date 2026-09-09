@@ -13,20 +13,20 @@ from bot import (
     register_new_user_profile
 )
 
-# Core layout framework dimensions
+# Core layout configuration matrix
 st.set_page_config(page_title="Helix SaaS Terminal", layout="wide", page_icon="🟢")
 
-# Premium high-contrast institutional dark workspace wrap injection
+# Premium high-contrast institutional dark responsive theme injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
-# Continuous cloud session architecture states initialization
+# Continuous cloud multi-tenant states initialization
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "username" not in st.session_state: st.session_state.username = ""
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = False
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
 
 # ==========================================
-# --- 🔐 STANDALONE MULTI-USER ACCESS GATE ---
+# --- 🔐 FREESTANDING USER AUTHENTICATION GATE ---
 # ==========================================
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #00ff99; margin-top: 40px;'>🟢 HELIX OB GLOBAL PORTAL</h1>", unsafe_allow_html=True)
@@ -35,7 +35,7 @@ if not st.session_state.logged_in:
     _, auth_col, _ = st.columns([1, 1.5, 1])
     
     with auth_col:
-        gate_mode = st.radio("Access Control", ["Sign In to Account", "Create Standalone Account"], horizontal=True)
+        gate_mode = st.radio("Access Control Mode", ["Sign In to Account", "Create Standalone Account"], horizontal=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
         user_input = st.text_input("Username Identifier Key").strip().lower()
@@ -59,23 +59,19 @@ if not st.session_state.logged_in:
                 else:
                     st.warning("Please specify valid alpha-numeric configuration characters.")
 else:
-    # Authenticated Multi-User Active Dashboard Workspace Frame
+    # Authenticated Active Trading View Panel Container
     current_user = st.session_state.username
-    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Namespace Context: <b>{current_user.upper()}</b> | Live Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>User Context: <b>{current_user.upper()}</b> | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
     
-    if st.button("🔒 Sever Connection Profile Session", type="secondary"):
-        st.session_state.logged_in = False
-        st.session_state.brain_active = False
-        st.rerun()
-
+    # Sidebar control matrix
     st.sidebar.header("Market Asset Settings")
     symbol_choice = st.sidebar.selectbox("Tracked Target Instrument", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
     
     st.sidebar.markdown("---")
     st.sidebar.header("Demo Broker Handshake")
     broker_name = st.sidebar.text_input("Broker Node Name", value="Exness-Demo")
-    account_num = st.sidebar.number_input("MT5 Account Number Key", value=474239881, step=1)
-    server_str = st.sidebar.text_input("MT5 Server String Parameter", value="Exness-MT5-Trial15")
+    broker_account = st.sidebar.number_input("MT5 Account Number Key", value=474239881, step=1)
+    broker_server = st.sidebar.text_input("MT5 Server String Parameter", value="Exness-MT5-Trial15")
     
     if st.sidebar.button("🔌 AUTHORIZE LIVE BROKER HANDSHAKE", type="primary", use_container_width=True):
         st.session_state.gateway_connected = True
@@ -88,22 +84,23 @@ else:
     lot_multiplier = st.sidebar.slider("Manual Sizing Multiplier Layer", 1.0, 5.0, 1.0, step=0.5)
 
     st.sidebar.markdown("---")
+    st.sidebar.header("Cloud Execution Mode")
     if not st.session_state.brain_active:
         if st.sidebar.button("⚡ ACTIVATE ALGORITHMIC BRAIN", type="primary", use_container_width=True):
             st.session_state.brain_active = True
             st.rerun()
-else:
-    if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
-        st.session_state.brain_active = False
-        st.rerun()
+    else:
+        if st.sidebar.button("🛑 EMERGENCY HALT SYSTEM", type="secondary", use_container_width=True):
+            st.session_state.brain_active = False
+            st.rerun()
 
-    # Pass computations to bot module matching current authenticated username parameters
+    # Pass computations to bot module matching current user namespace (Requirement 3, 4)
     brain_data = run_autonomous_brain(account_balance, risk_percentage, symbol_choice, st.session_state.brain_active, current_user)
     live_bid = brain_data["live_bid"]
     live_ask = brain_data["live_ask"]
     spread_delta = round(abs(live_ask - live_bid), 4)
 
-    # Core parameters summary matrix row configuration
+    # Core parameters header metric row block
     m_c1, m_c2, m_c3, m_c4 = st.columns(4)
     m_c1.metric(label="ACCOUNT BALANCE CONTEXT", value=f"${account_balance:,.2f}")
     m_c2.metric(label="LIVE SCALPED BID", value=f"${live_bid:,.4f}" if "EUR" in symbol_choice else f"${live_bid:,.2f}")
@@ -111,7 +108,7 @@ else:
     risk_dollars = account_balance * (risk_percentage / 100.0)
     m_c4.metric(label="RISK ALLOCATION SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Risk Layer")
 
-    # ⚡ CRASH-PROOF FLAT LABELS: Stripped out abstract emoticons to force stable layout painting across all tabs
+    # Crash-proof raw flat text tabs strings
     tab_desk, tab_journal, tab_rules = st.tabs([
         "Live Trading Desk", 
         "Personal Journal Logs", 
@@ -124,7 +121,6 @@ else:
         trend_color = "green" if "BULLISH" in brain_data["market_trend"] else "red"
         tc1.markdown(f"**Trend Evaluation Target:** :{trend_color}[{brain_data['market_trend']}]")
         tc2.markdown(f"**Volatility Spread Delta:** `{spread_delta} Points` (Max Allowable Ceiling Buffer: Safe)")
-        
         st.markdown(f"**Oscillator Boundaries:** `RSI (14) = {brain_data['rsi']:.2f}` | Strategy Status: `[{brain_data['rsi_status']}]`")
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -165,5 +161,11 @@ else:
             annotation_text="VALIDATED ORDER BLOCK CONCENTRATION (M15)", annotation_position="top left",
             annotation_font=dict(size=9, color="#ffaa00")
         )
-        fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5, annotation_text="ENTRY POOL")
-        fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1, annotation_text="RISK FLOOR")
+        fig.add_hline(y=brain_data["entry_level"], line_dash="dot", line_color="#33ccff", line_width=1.5)
+        fig.add_hline(y=brain_data["stop_loss"], line_dash="solid", line_color="#ff3366", line_width=1)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("### Active Open Position Matrix")
+        st.dataframe(pd.DataFrame(brain_data["positions_matrix"]), use_container_width=True, hide_index=True)
+
