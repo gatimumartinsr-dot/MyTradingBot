@@ -15,7 +15,6 @@ DB_FILE = "trades_db_matrix_v6.json"
 USER_DB_FILE = "users_db_auth.json"
 
 def init_dbs():
-    # Dynamic runtime file system initializer
     try:
         if not os.path.exists(DB_FILE):
             with open(DB_FILE, "w") as f:
@@ -61,7 +60,6 @@ def get_archived_trades(username=None):
                     return [trade for trade in data if str(trade.get("Operator Namespace", "")).lower() == str(username).lower()]
                 return data
         
-        # Fallback dataset memory injector to protect display tabs from blanking out
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return [
             {"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY LIMIT", "Volume Lots": 0.01, "Entry Execution Price": 4387.10, "Current Real Market Price": 4389.20, "Net Floating PnL Balance": "+$45.20"},
@@ -177,7 +175,7 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    simulated_minutes_to_news = random.choice([15, 45, 60, 120])
+    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
@@ -204,10 +202,16 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
     eur_bid, _ = fetch_live_market_tick("EURUSDm")
     xau_bid, _ = fetch_live_market_tick("XAUUSDm")
     
-    for trade in raw_saved:
-        current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
-        sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
-        pnl_sign = "+" if sim_pnl >= 0 else ""
-        positions_matrix.append({
-            "Transaction ID": trade.get("Transaction ID", "TX-0000"), "Date Time Stamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Symbol Asset": trade.get("Symbol Asset", symbol), "Direction Target": trade.get("Direction Target", ""),
-            "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Execution Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
+    # ⚡ SHIELD FIXED DATA LOOP PARSER: Explicitly sealed dictionary structures cleanly
+    if raw_saved and len(raw_saved) > 0 and "Symbol Asset" in raw_saved[0]:
+        for trade in raw_saved:
+            current_asset_price = xau_bid if "XAU" in str(trade.get("Symbol Asset", "")) else (btc_bid if "BTC" in str(trade.get("Symbol Asset", "")) else eur_bid)
+            sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
+            pnl_sign = "+" if sim_pnl >= 0 else ""
+            positions_matrix.append({
+                "Ticket ID": trade.get("Transaction ID", "TX-0000"), 
+                "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), 
+                "Instrument Asset": trade.get("Symbol Asset", symbol), 
+                "Direction Matrix": trade.get("Direction Target", ""),
+                "Volume Lots": trade.get("Volume Lots", 0.01), 
+                "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
