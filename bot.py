@@ -92,9 +92,11 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_walk += random.uniform(-scale, scale * 1.04)
         prices.append(current_walk)
         
+    # ⚡ TRUE EXPONENTIAL MOVING AVERAGE ARRAYS REPAIR MATRIX
     def calculate_ema(data_array, period):
         k = 2 / (period + 1)
-        ema_values = [float(data_array)]
+        # Seed safely using index item [0] to eliminate mathematical type errors
+        ema_values = [float(data_array[0])]
         for price in data_array[1:]:
             ema_values.append((price * k) + (ema_values[-1] * (1 - k)))
         return round(ema_values[-1], 4 if "EUR" in sym_str else 2)
@@ -137,8 +139,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    # ⚡ THE MATHEMATICAL FIX: Seed clean minutes array integers inside choice parameters to secure compilation stability
-    simulated_minutes_to_news = random.choice([15, 45, 90, 120]) 
+    # Seed clean minutes array integers inside choice parameters to secure compilation stability
+    simulated_minutes_to_news = random.choice([15, 45, 60, 120]) 
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
