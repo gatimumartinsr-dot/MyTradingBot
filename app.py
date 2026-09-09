@@ -197,9 +197,9 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
             sim_pnl = random.uniform(-5.0, 25.0) if "BUY" in str(trade.get("Direction Target", "")) else random.uniform(-15.0, 5.0)
             pnl_sign = "+" if sim_pnl >= 0 else ""
             positions_matrix.append({
-                "Ticket ID": trade.get("Transaction ID", "TX-0000"), "Timestamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Instrument Asset": trade.get("Symbol Asset", symbol), "Direction Matrix": trade.get("Direction Target", ""),
-                "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
-                "Current Price": f"${current_asset_price:,.2f}", "Net Floating PnL": f"{pnl_sign}${sim_pnl:,.2f}"
+                "Transaction ID": trade.get("Transaction ID", "TX-0000"), "Date Time Stamp (Local)": trade.get("Date Time Stamp (Local)", ""), "Symbol Asset": trade.get("Symbol Asset", symbol), "Direction Target": trade.get("Direction Target", ""),
+                "Volume Lots": trade.get("Volume Lots", 0.01), "Entry Execution Price": f"${trade.get('Entry Execution Price', 0.0):,.2f}",
+                "Current Real Market Price": f"${current_asset_price:,.2f}", "Net Floating PnL Balance": f"{pnl_sign}${sim_pnl:,.2f}"
             })
     else:
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -207,4 +207,4 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
             {"Transaction ID": "TX-9931", "Date Time Stamp (Local)": current_time, "Symbol Asset": "XAUUSDm", "Direction Target": "BUY (LONG)", "Volume Lots": 0.01, "Entry Execution Price": f"${xau_bid-2.10:,.2f}", "Current Real Market Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"},
             {"Transaction ID": "TX-8824", "Date Time Stamp (Local)": current_time, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Execution Price": f"${btc_bid+15.0:,.2f}", "Current Real Market Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}
         ]
-    return {
+    
