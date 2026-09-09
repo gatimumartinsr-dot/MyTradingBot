@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from bot import run_autonomous_brain, fetch_live_market_tick, calculate_position_size, dispatch_live_order_matrix, get_archived_trades, clear_trade_database
 
-# Core terminal view settings
+# Core terminal view layout settings
 st.set_page_config(page_title="Helix OB Terminal", layout="wide", page_icon="🟢")
 
 # Mobile responsive CSS styling wrap injection
@@ -20,7 +20,7 @@ if "brain_active" not in st.session_state: st.session_state.brain_active = False
 operator_id = st.session_state.username
 current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='float: right; color: #8892b0; font-family: monospace;'>Operator: `{operator_id}` | Local System Time: `{current_time_stamp}`</div>", unsafe_allow_html=True)
 
 st.title("🟢 Helix OB — Institutional Matrix Workspace")
 st.caption("Continuous Cloud Algorithmic Execution Pipeline Hub")
@@ -75,10 +75,10 @@ risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
 tab_desk, tab_journal, tab_rules, tab_login = st.tabs([
-    "🖥️ Live Desk Monitoring", 
-    "🗒️ Trade Journal Logs", 
-    "📋 Risk Check Audit", 
-    "🔒 Security Portal Access"
+    "Live Desk Monitoring", 
+    "Trade Journal Logs", 
+    "Risk Check Audit", 
+    "Security Portal Access"
 ])
 
 # ==========================================
