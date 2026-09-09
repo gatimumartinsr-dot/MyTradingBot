@@ -15,7 +15,8 @@ if "logged_in" not in st.session_state: st.session_state.logged_in = True
 if "username" not in st.session_state: st.session_state.username = "MARTINS"
 if "gateway_connected" not in st.session_state: st.session_state.gateway_connected = True  
 if "brain_active" not in st.session_state: st.session_state.brain_active = False
-if "user_db" not in st.session_state: st.session_state.user_db = {"martins": "helix2026"}
+if "user_db" not in st.session_state:
+    st.session_state.user_db = {"martins": "helix2026"}
 
 operator_id = st.session_state.username
 current_time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -75,12 +76,12 @@ m_c3.metric(label="LIVE ASK FEED", value=f"${live_ask:,.4f}" if "EUR" in symbol_
 risk_dollars = account_balance * (risk_percentage / 100.0)
 m_c4.metric(label="RISK BUDGET SAFEGUARD", value=f"${risk_dollars:,.2f}", delta=f"{risk_percentage}% Alloc")
 
-# ⚡ UNBREAKABLE UNIFIED TAB DECLARATION: Clean text labels to prevent rendering conflicts
+# ⚡ CRASH-PROOF FLAT LABELS: Stripped out abstract emoticons to force stable layout painting across all tabs
 tab_desk, tab_journal, tab_rules, tab_login = st.tabs([
-    "🖥️ Real-Time Live Desk", 
-    "🗒️ Live Trade Journal Logs", 
-    "📋 System Check Rules Audit", 
-    "🔒 Portal Security Access"
+    "Live Desk Monitoring", 
+    "Trade Journal Logs", 
+    "Risk Check Audit", 
+    "Security Portal Access"
 ])
 
 # ==========================================
