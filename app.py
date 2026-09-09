@@ -9,7 +9,7 @@ from datetime import datetime
 # ===================================================
 st.set_page_config(page_title="Helix OB Global Portal", layout="wide", page_icon="🟢")
 
-# Premium deep dark institutional custom theme wrapper injection
+# Premium deep dark institutional theme layout injection
 st.markdown("<style>html, body, [data-testid='stAppViewContainer'], [data-testid='stHeader'] { background-color: #0b0e14 !important; color: #e1e4ea !important; } div[data-testid='metric-container'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 15px !important; border-radius: 8px !important; border-left: 4px solid #00ff99 !important; } .stTabs [data-baseweb='tab-list'] { gap: 8px; } .stTabs [data-baseweb='tab'] { background-color: #121620 !important; border: 1px solid #1f2433 !important; padding: 8px 16px !important; color: #8892b0 !important; border-radius: 4px 4px 0px 0px !important; } .stTabs [aria-selected='true'] { color: #00ff99 !important; border-bottom: 2px solid #00ff99 !important; } .stButton>button { border-radius: 6px !important; font-weight: 600 !important; } @media (max-width: 768px) { [data-testid='stSidebar'] { width: 100% !important; } }</style>", unsafe_allow_html=True)
 
 # High-frequency multi-tenant session storage networks memory initialization
@@ -23,10 +23,14 @@ if "saas_trades_db" not in st.session_state:
         {"Transaction ID": "TX-8824", "Operator Namespace": "martins", "Date Time Stamp (Local)": current_time_str, "Symbol Asset": "BTCUSDm", "Direction Target": "SELL LIMIT", "Volume Lots": 0.05, "Entry Execution Price": 56450.00, "Current Real Market Price": 56410.00, "Net Floating PnL Balance": "+$200.00"}
     ]
 
-if "logged_in_status_flag" not in st.session_state: st.session_state["logged_in_status_flag"] = False
-if "saas_auth_username" not in st.session_state: st.session_state["saas_auth_username"] = ""
-if "gateway_connected" not in st.session_state: st.session_state["gateway_connected"] = False
-if "brain_active" not in st.session_state: st.session_state["brain_active"] = False
+if "logged_in_status_flag" not in st.session_state: 
+    st.session_state["logged_in_status_flag"] = False
+if "saas_auth_username" not in st.session_state: 
+    st.session_state["saas_auth_username"] = ""
+if "gateway_connected" not in st.session_state: 
+    st.session_state["gateway_connected"] = False
+if "brain_active" not in st.session_state: 
+    st.session_state["brain_active"] = False
 
 # ===================================================
 # --- 📁 BACKEND CORE SYSTEM ENGINE CONTROLLERS ----
@@ -126,13 +130,6 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "REJECTED BY RISK ALGORITHM — MARKET OVERSOLD RANGE FAILURE FLOOR"
         if "SELL" in active_direction: rsi_filter_block = True
 
-    simulated_daily_profit = 0.00  
-    max_daily_profit_target = 50.00
-    if simulated_daily_profit >= max_daily_profit_target:
-        rsi_filter_block = True
-        rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
-        market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
-
     simulated_minutes_to_news = random.randint(35, 120)
     
     if "BTC" in sym_str:
@@ -165,4 +162,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         current_time = datetime.now().strftime("%H:%M:%S")
         positions_matrix = [{"Ticket ID": "OB-9931", "Timestamp (Local)": current_time, "Instrument Asset": "XAUUSDm", "Direction Matrix": "BUY (LONG)", "Volume Lots": 0.01, "Entry Price": f"${xau_bid-2.10:,.2f}", "Current Price": f"${xau_bid:,.2f}", "Net Floating PnL Balance": "+$45.20"}, {"Ticket ID": "OB-8824", "Timestamp (Local)": current_time, "Instrument Asset": "BTCUSDm", "Direction Matrix": "SELL (SHORT)", "Volume Lots": 0.05, "Entry Price": f"${btc_bid+15.0:,.2f}", "Current Price": f"${btc_bid:,.2f}", "Net Floating PnL Balance": "+$110.40"}]
         
-    # ⚡ THE INDENTATION PROTOCOL BLOCK FIXED: Properly filled out code operations inside the conditional safety block to solve compile halts
+    if simulated_minutes_to_news <= 30:
+        rsi_filter_block = True
+        rsi_status = "⚠️ HIGH-IMPACT NEWS RISK WINDOW DETECTED — ORDER ENTRYS MUTED"
+        market_trend = f"MUTE: NEWS SPIKE SAFETY ENGAGED ({simulated_minutes_to_news} MINS TO RELEASE)"
+
