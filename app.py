@@ -121,8 +121,8 @@ def run_autonomous_brain(balance, risk_percentage, symbol="XAUUSDm", brain_activ
         rsi_status = "🏆 DAILY PROFIT TARGET ACHIEVED (CAP PROTOCOL ENGAGED)"
         market_trend = "MUTE: TARGET REACHED. SAFEGUARDING WALLET BALANCE."
 
-    # ⚡ FIXED RANDOM CHOICE LOOP: Populated choices array properly to resolve index trace exception parameters
-    simulated_minutes_to_news = random.choice([45, 60, 90, 120])
+    # ⚡ SEEDED RANDOM CHOICE MATRIX: Populated array sequence to solve internal choice index errors
+    simulated_minutes_to_news = random.choice([35, 45, 60, 90, 120])
     
     if "BTC" in sym_str:
         entry_level = round(live_bid, 2)
