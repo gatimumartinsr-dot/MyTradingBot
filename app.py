@@ -128,24 +128,55 @@ def candles(symbol: str, count: int = 300) -> pd.DataFrame:
 
 
 def sample_candles(symbol: str, n: int = 300) -> pd.DataFrame:
-    """Deterministic walk so the UI is developable without a terminal."""
+    """
+    Deterministic price action that actually respects levels — trends, then
+    ranges between a floor and a ceiling, so zones and gaps mean something.
+    """
+    import math
     import random
+
     base = {"XAU": 4389.2, "BTC": 64350.0, "EUR": 1.1045, "GBP": 1.2918,
             "US30": 44210.0, "NAS": 20475.0, "OIL": 71.44}
-    price = next((v for k, v in base.items() if k in symbol.upper()), 100.0)
-    vol = price * 0.0004
-    rnd = random.Random(sum(map(ord, symbol)))
-    rows, p = [], price - vol * 40
-    for i in range(n):
-        drift = -0.25 if i < n * 0.5 else 0.35
-        o = p
-        p += (rnd.random() - 0.5 + drift) * vol * 1.6
-        wick = vol * (0.4 + rnd.random())
-        rows.append({"time": pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=15 * (n - i)),
-                     "open": o, "close": p,
-                     "high": max(o, p) + wick * rnd.random(),
-                     "low": min(o, p) - wick * rnd.random()})
-    return pd.DataFrame(rows)
+    anchor = next((v for k, v in base.items() if k in symbol.upper()), 100.0)
+    vol = anchor * 0.0009
+    rnd = random.Random(sum(map(ord, symbol)) * 31)
+
+    # alternating regimes: trend, range, trend — the shape S&R is built for
+    regimes, i = [], 0
+    while i < n:
+        span = rnd.randint(28, 46)
+        kind = "range" if len(regimes) % 2 else rnd.choice(["up", "down"])
+        regimes.append((kind, min(span, n - i)))
+        i += span
+
+    rows, p = [], anchor - vol * 12
+    floor = ceiling = None
+    t_end = pd.Timestamp.now(tz="UTC").floor("15min")
+
+    for k, (kind, span) in enumerate(regimes):
+        if kind == "range":
+            floor, ceiling = p - vol * 7, p + vol * 7
+        for j in range(span):
+            o = p
+            if kind == "range":
+                # pull back toward the middle, harder near the edges
+                pos = (p - floor) / max(ceiling - floor, 1e-9)
+                pull = (0.5 - pos) * 2.2
+                p += (rnd.random() - 0.5 + pull) * vol
+            else:
+                bias = 0.42 if kind == "up" else -0.42
+                p += (rnd.random() - 0.5 + bias) * vol * 1.4
+            body = abs(p - o)
+            wick = vol * (0.25 + rnd.random() * 0.75)
+            rows.append({"open": o, "close": p,
+                         "high": max(o, p) + wick * rnd.random() + body * 0.1,
+                         "low": min(o, p) - wick * rnd.random() - body * 0.1})
+
+    rows = rows[:n]
+    times = [t_end - pd.Timedelta(minutes=15 * (len(rows) - 1 - i)) for i in range(len(rows))]
+    df = pd.DataFrame(rows)
+    df.insert(0, "time", times)
+    return df
 
 
 def account_snapshot():
@@ -182,38 +213,96 @@ def journal(limit: int = 300):
 # Chart
 # ──────────────────────────────────────────────────────────────────────
 
-def chart(symbol: str, df: pd.DataFrame, rules: Rules) -> go.Figure:
+VISIBLE_BARS = 120
+
+
+def chart(symbol: str, df: pd.DataFrame, rules: Rules, bars: int = VISIBLE_BARS) -> go.Figure:
+    """
+    Levels are read from the FULL history — a zone is only meaningful if it was
+    respected over time — but only the last `bars` candles are shown, so the
+    bodies are readable. Boxes run from where they formed to the right edge,
+    the way a terminal draws them, and each label sits in the right margin.
+    """
+    zones = build_zones(df, rules)
+    gaps = [g for g in find_fvgs(df, rules) if not g.filled]
+    blocks = order_blocks(df, rules)
+
+    view = df.iloc[-bars:].reset_index(drop=True)
+    price = float(view["close"].iloc[-1])
+    lo_v, hi_v = float(view["low"].min()), float(view["high"].max())
+    pad = (hi_v - lo_v) * 0.08
+    y_lo, y_hi = lo_v - pad, hi_v + pad
+
+    t0, t1 = view["time"].iloc[0], view["time"].iloc[-1]
+    bar = view["time"].iloc[1] - view["time"].iloc[0]
+    right = t1 + bar * 9          # quiet margin the labels live in
+    digits = 5 if price < 20 else 2
+
     fig = go.Figure(go.Candlestick(
-        x=df["time"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+        x=view["time"], open=view["open"], high=view["high"],
+        low=view["low"], close=view["close"],
         increasing_line_color=UP, decreasing_line_color=DOWN,
-        increasing_fillcolor=UP, decreasing_fillcolor=DOWN, line_width=1, name=symbol))
+        increasing_fillcolor=UP, decreasing_fillcolor=DOWN,
+        line_width=1, whiskerwidth=0.25, name=symbol,
+        hovertext=None, showlegend=False))
 
-    x0, x1 = df["time"].iloc[0], df["time"].iloc[-1]
+    def band(lo, hi, fill, edge, label, start=None, dash=None):
+        """A shaded band with its label parked in the right margin."""
+        if hi < y_lo or lo > y_hi:
+            return                                   # off screen, skip it
+        thin = (hi - lo) < (y_hi - y_lo) * 0.006     # give hairlines presence
+        if thin:
+            mid = (lo + hi) / 2
+            lo, hi = mid - (y_hi - y_lo) * 0.003, mid + (y_hi - y_lo) * 0.003
+        fig.add_shape(type="rect", x0=start or t0, x1=right, y0=lo, y1=hi,
+                      fillcolor=fill, layer="below",
+                      line=dict(color=edge, width=1, dash=dash or "solid"))
+        fig.add_annotation(x=right, y=(lo + hi) / 2, text=label, showarrow=False,
+                           xanchor="right", yanchor="middle",
+                           font=dict(size=9, color=edge, family="Inter"))
 
-    def band(lo, hi, fill, line, label, dash="solid"):
-        fig.add_shape(type="rect", x0=x0, x1=x1, y0=lo, y1=hi,
-                      fillcolor=fill, line=dict(color=line, width=1, dash=dash), layer="below")
-        fig.add_annotation(x=x0, y=hi, text=label, showarrow=False, xanchor="left", yanchor="bottom",
-                           font=dict(size=9, color=line))
+    # the two zones that matter: nearest support below, nearest resistance above
+    below = [z for z in zones if z.kind == "support" and z.mid <= price]
+    above = [z for z in zones if z.kind == "resistance" and z.mid >= price]
+    if below:
+        z = max(below, key=lambda z: z.mid)
+        band(z.low, z.high, "rgba(127,191,154,.11)", UP, f"SUPPORT  {z.mid:,.{digits}f}")
+    if above:
+        z = min(above, key=lambda z: z.mid)
+        band(z.low, z.high, "rgba(217,138,148,.11)", DOWN, f"RESISTANCE  {z.mid:,.{digits}f}")
 
-    for z in build_zones(df, rules)[:6]:
-        if z.kind == "support":
-            band(z.low, z.high, "rgba(127,191,154,.10)", UP, "SUPPORT")
-        else:
-            band(z.low, z.high, "rgba(217,138,148,.10)", DOWN, "RESISTANCE")
+    # gaps and blocks start where they formed
+    def x_at(idx):
+        offset = idx - (len(df) - len(view))
+        return view["time"].iloc[offset] if 0 <= offset < len(view) else t0
 
-    for g in [g for g in find_fvgs(df, rules) if not g.filled][-3:]:
-        band(g.low, g.high, "rgba(145,132,217,.13)", A300, "FVG · UNFILLED", "dash")
+    for g in gaps[-2:]:
+        band(g.low, g.high, "rgba(145,132,217,.14)", A300, "FVG", x_at(g.index), "dot")
 
-    for ob in order_blocks(df, rules):
-        band(ob.low, ob.high, "rgba(145,132,217,.22)", ACCENT, f"{ob.direction.upper()} OB · {ob.event}")
+    for ob in blocks[:1]:
+        band(ob.low, ob.high, "rgba(145,132,217,.26)", ACCENT,
+             f"{ob.direction[:4].upper()} OB · {ob.event}", x_at(ob.index))
+
+    # last price
+    fig.add_shape(type="line", x0=t0, x1=right, y0=price, y1=price,
+                  line=dict(color=MUTED, width=1, dash="dot"))
+    fig.add_annotation(x=right, y=price, text=f"  {price:,.{digits}f}  ", showarrow=False,
+                       xanchor="left", yanchor="middle", font=dict(size=10, color="#161826"),
+                       bgcolor=A300, borderpad=3)
 
     fig.update_layout(
-        height=460, margin=dict(l=8, r=8, t=8, b=8),
-        paper_bgcolor=SURFACE, plot_bgcolor=SURFACE,
+        height=470, margin=dict(l=6, r=64, t=10, b=6),
+        paper_bgcolor=SURFACE, plot_bgcolor=SURFACE, dragmode="pan",
         font=dict(color=TEXT, family="Inter", size=11),
-        xaxis=dict(rangeslider_visible=False, gridcolor="#2c2f3d", showline=False),
-        yaxis=dict(gridcolor="#2c2f3d", side="right"), showlegend=False)
+        hovermode="x unified", showlegend=False,
+        hoverlabel=dict(bgcolor="#1b1d2b", bordercolor="#3f424d",
+                        font=dict(color=TEXT, family="Inter", size=11)),
+        xaxis=dict(rangeslider_visible=False, gridcolor="rgba(233,233,237,.05)",
+                   showline=False, zeroline=False, range=[t0, right],
+                   showspikes=True, spikemode="across", spikesnap="cursor",
+                   spikecolor="rgba(233,233,237,.22)", spikethickness=1, spikedash="dot"),
+        yaxis=dict(gridcolor="rgba(233,233,237,.05)", side="right", zeroline=False,
+                   range=[y_lo, y_hi], tickformat=f",.{digits}f", showspikes=False))
     return fig
 
 
@@ -393,7 +482,12 @@ def face_app():
         st.dataframe(positions(), use_container_width=True, hide_index=True)
 
     def _charts():
-        st.plotly_chart(chart(symbol, df, r), use_container_width=True)
+        c1, c2 = st.columns([3, 1])
+        c1.markdown(f"##### {symbol} · M15")
+        span = c2.select_slider("Bars", [60, 120, 200, 300], value=120,
+                                label_visibility="collapsed")
+        st.plotly_chart(chart(symbol, df, r, span), use_container_width=True,
+                        config={"displayModeBar": False, "scrollZoom": True})
         st.caption("Support and resistance from clustered swing points · unfilled fair value gaps · "
                    "order blocks validated by BOS or CHoCH.")
 
