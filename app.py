@@ -66,6 +66,19 @@ st.markdown(f"""
       background:#3f424d; color:#f3f5fe; margin-right:5px; white-space:nowrap; }}
   .zl-muted {{ color:{MUTED}; font-size:11.5px; line-height:1.5; }}
   [data-testid='stMetricValue'] {{ font-size:21px !important; }}
+  [data-testid='stSlider'] [data-baseweb='slider'] div[role='slider'] {{
+      background-color:{ACCENT} !important; box-shadow:none !important; }}
+  [data-testid='stSlider'] [data-baseweb='slider'] > div > div > div:first-child {{
+      background:{ACCENT} !important; }}
+  [data-testid='stSlider'] [data-testid='stThumbValue'] {{ color:{A300} !important; }}
+  [data-testid='stSlider'] [data-testid='stTickBar'] {{ display:none !important; }}
+  [data-baseweb='radio'] div[aria-checked='true'] {{
+      background-color:{ACCENT} !important; border-color:{ACCENT} !important; }}
+  [data-testid='stCheckbox'] [aria-checked='true'],
+  [data-testid='stToggle'] [aria-checked='true'] {{ background-color:{ACCENT} !important; }}
+  a, a:visited {{ color:{A300} !important; }}
+  a:hover {{ color:{ACCENT} !important; }}
+  [data-testid='stProgress'] > div > div > div {{ background-color:{ACCENT} !important; }}
   .stTabs [data-baseweb='tab-list'] {{ overflow-x:auto; flex-wrap:nowrap; }}
   @media (max-width:768px) {{
       .block-container {{ padding:1rem 0.8rem 3rem !important; }}
@@ -250,26 +263,30 @@ def chart(symbol: str, df: pd.DataFrame, rules: Rules, bars: int = VISIBLE_BARS)
         """A shaded band with its label parked in the right margin."""
         if hi < y_lo or lo > y_hi:
             return                                   # off screen, skip it
-        thin = (hi - lo) < (y_hi - y_lo) * 0.006     # give hairlines presence
-        if thin:
+        floor_h = (y_hi - y_lo) * 0.016              # no hairline bands
+        if (hi - lo) < floor_h:
             mid = (lo + hi) / 2
-            lo, hi = mid - (y_hi - y_lo) * 0.003, mid + (y_hi - y_lo) * 0.003
+            lo, hi = mid - floor_h / 2, mid + floor_h / 2
         fig.add_shape(type="rect", x0=start or t0, x1=right, y0=lo, y1=hi,
                       fillcolor=fill, layer="below",
                       line=dict(color=edge, width=1, dash=dash or "solid"))
-        fig.add_annotation(x=right, y=(lo + hi) / 2, text=label, showarrow=False,
-                           xanchor="right", yanchor="middle",
-                           font=dict(size=9, color=edge, family="Inter"))
+        fig.add_annotation(x=start or t0, y=hi, text=f" {label} ", showarrow=False,
+                           xanchor="left", yanchor="bottom", bgcolor="rgba(27,29,43,.9)",
+                           borderpad=2, font=dict(size=9.5, color=edge, family="Inter"))
 
     # the two zones that matter: nearest support below, nearest resistance above
-    below = [z for z in zones if z.kind == "support" and z.mid <= price]
-    above = [z for z in zones if z.kind == "resistance" and z.mid >= price]
+    sups = [z for z in zones if z.kind == "support"]
+    ress = [z for z in zones if z.kind == "resistance"]
+    below = [z for z in sups if z.mid <= price] or sups
+    above = [z for z in ress if z.mid >= price] or ress
     if below:
         z = max(below, key=lambda z: z.mid)
-        band(z.low, z.high, "rgba(127,191,154,.11)", UP, f"SUPPORT  {z.mid:,.{digits}f}")
+        y_lo = min(y_lo, z.low - pad * 0.4)
+        band(z.low, z.high, "rgba(127,191,154,.12)", UP, f"SUPPORT {z.mid:,.{digits}f}")
     if above:
         z = min(above, key=lambda z: z.mid)
-        band(z.low, z.high, "rgba(217,138,148,.11)", DOWN, f"RESISTANCE  {z.mid:,.{digits}f}")
+        y_hi = max(y_hi, z.high + pad * 0.4)
+        band(z.low, z.high, "rgba(217,138,148,.12)", DOWN, f"RESISTANCE {z.mid:,.{digits}f}")
 
     # gaps and blocks start where they formed
     def x_at(idx):
@@ -482,10 +499,10 @@ def face_app():
         st.dataframe(positions(), use_container_width=True, hide_index=True)
 
     def _charts():
-        c1, c2 = st.columns([3, 1])
+        c1, c2 = st.columns([2.6, 1])
         c1.markdown(f"##### {symbol} · M15")
-        span = c2.select_slider("Bars", [60, 120, 200, 300], value=120,
-                                label_visibility="collapsed")
+        span = c2.radio("Bars", [60, 120, 200], index=1, horizontal=True,
+                        format_func=lambda v: f"{v}", label_visibility="collapsed")
         st.plotly_chart(chart(symbol, df, r, span), use_container_width=True,
                         config={"displayModeBar": False, "scrollZoom": True})
         st.caption("Support and resistance from clustered swing points · unfilled fair value gaps · "
