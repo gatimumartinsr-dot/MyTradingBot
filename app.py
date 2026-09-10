@@ -5,12 +5,18 @@ import random
 import time
 from datetime import datetime
 
+# --- CRITICAL NATIVE HARDWARE BRIDGES ---
+try:
+    import MetaTrader5 as mt5
+    MT5_AVAILABLE = True
+except ImportError:
+    MT5_AVAILABLE = False
+
 # ====================================================================
-# 1. SYSTEM INITIALIZATION & STATE ENGINE (CRITICAL TOP-LEVEL MATRIX)
+# 1. SYSTEM INITIALIZATION & STATE ENGINE
 # ====================================================================
 st.set_page_config(page_title="Helix OB Global Portal", layout="wide", page_icon="🟢")
 
-# Initialize all state flags safely to prevent reset loops on re-run
 if "logged_in_status_flag" not in st.session_state:
     st.session_state["logged_in_status_flag"] = False
 if "saas_auth_username" not in st.session_state:
@@ -18,20 +24,12 @@ if "saas_auth_username" not in st.session_state:
 if "mt5_connected" not in st.session_state:
     st.session_state["mt5_connected"] = False
 
-# Hardened Session State DB Engine
 if "saas_user_db" not in st.session_state:
     st.session_state["saas_user_db"] = {"martins": "helix2026"}
 
-if "saas_trades_db" not in st.session_state:
-    st.session_state["saas_trades_db"] = [
-        {"Ticket": "TX-9931", "Asset": "XAUUSDm", "Type": "BUY LIMIT", "Lots": 0.01, "Entry": 2514.20, "Status": "Active", "PnL": 23.00, "Timestamp": "2026-09-10 10:14"},
-        {"Ticket": "TX-8824", "Asset": "BTCUSDm", "Type": "SELL LIMIT", "Lots": 0.05, "Entry": 56450.00, "Status": "Active", "PnL": 200.00, "Timestamp": "2026-09-10 11:45"}
-    ]
-
 if "journal_logs" not in st.session_state:
     st.session_state["journal_logs"] = [
-        {"Timestamp": "2026-09-10 09:00", "Event": "System initialized under matrix deployment rule."},
-        {"Timestamp": "2026-09-10 10:15", "Event": "TX-9931 successfully validated via internal router."}
+        {"Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M'), "Event": "System initialized. Helix Engine Online."}
     ]
 
 # Institutional UI Dark Palette Injector
@@ -47,24 +45,96 @@ st.markdown("""
 
 
 # ====================================================================
-# 2. INTERFACE SUBSYSTEMS & MIDDLEWARE BACKEND
+# 2. METATRADER 5 LIVE BACKEND PIPELINES
 # ====================================================================
-def mt5_node_handshake(login, password, server):
-    """
-    Placeholder system routing matrix for MetaTrader5 terminal connection.
-    Replace this with your physical 'import MetaTrader5 as mt5' nodes down the line.
-    """
-    if login and password and server:
-        time.sleep(0.8) # Simulate structural API validation latency
-        return True
-    return False
+def mt5_live_connect(login, password, server):
+    """Establishes real physical socket binding to target broker terminal."""
+    if not MT5_AVAILABLE:
+        # Fallback simulation flag if running on an unsupported platform (e.g. Linux cloud)
+        return True, "Simulation Mode Active (Package Unavailable natively on this OS)"
+    
+    # Initialize terminal connection
+    if not mt5.initialize():
+        return False, f"Initialization Failed: {mt5.last_error()}"
+    
+    # Attempt account handshake authentication
+    login_status = mt5.login(login=int(login), password=password, server=server)
+    if login_status:
+        return True, "Successfully bound to live broker terminal node."
+    else:
+        error_code = mt5.last_error()
+        mt5.shutdown()
+        return False, f"Handshake Rejected. Code: {error_code}"
 
-def generate_live_chart_data(symbol):
-    """Generates clean real-time pseudo-market arrays for analytical plots."""
-    np.random.seed(42)
-    base_price = 2515.00 if "XAU" in symbol else (56400.00 if "BTC" in symbol else 1.0850)
-    prices = base_price + np.cumsum(np.random.normal(0, base_price * 0.001, 100))
-    return pd.DataFrame({"Timeline Tick": range(100), "Price Node ($)": prices})
+def fetch_live_positions():
+    """Pulls true open orders out of the live initialized MT5 engine."""
+    if not MT5_AVAILABLE or not st.session_state["mt5_connected"]:
+        # Fallback Mock Data if connection isn't complete
+        return [
+            {"Ticket": "TX-9931", "Asset": "XAUUSDm", "Type": "BUY LIMIT", "Lots": 0.01, "Entry": 2514.20, "Status": "Active", "PnL": 23.00},
+            {"Ticket": "TX-8824", "Asset": "BTCUSDm", "Type": "SELL LIMIT", "Lots": 0.05, "Entry": 56450.00, "Status": "Active", "PnL": 200.00}
+        ]
+    
+    # Query MT5 API directly
+    positions = mt5.positions_get()
+    if positions is None or len(positions) == 0:
+        return []
+    
+    df_list = []
+    for pos in positions:
+        df_list.append({
+            "Ticket": f"TX-{pos.ticket}",
+            "Asset": pos.symbol,
+            "Type": "BUY" if pos.type == 0 else "SELL",
+            "Lots": pos.volume,
+            "Entry": pos.price_open,
+            "Status": "Live Running",
+            "PnL": round(pos.profit, 2)
+        })
+    return df_list
+
+def transmit_live_order(symbol, order_type, entry_price, volume):
+    """Dispatches true transactional payloads to the MT5 broker server."""
+    if not MT5_AVAILABLE or not st.session_state["mt5_connected"]:
+        return True, f"Mock Order Matrix TX-{random.randint(1000,9999)} simulated."
+
+    # Map frontend types to native MT5 operational variables
+    mt5_type = mt5.ORDER_TYPE_BUY_LIMIT if order_type == "BUY LIMIT" else mt5.ORDER_TYPE_SELL_LIMIT
+    
+    request = {
+        "action": mt5.TRADE_ACTION_PENDING,
+        "symbol": symbol,
+        "volume": float(volume),
+        "type": mt5_type,
+        "price": float(entry_price),
+        "deviation": 20,
+        "magic": 20260910,
+        "comment": "Helix Matrix Dispatch Engine",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": mt5.ORDER_FILLING_IOC,
+    }
+    
+    result = mt5.order_send(request)
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        return False, f"Execution Refused: {result.comment} (Code: {result.retcode})"
+    return True, f"Order successfully filled on live book. Ticket ID: {result.order}"
+
+def get_live_ticks(symbol):
+    """Pulls actual real-time bar matrices to render charts."""
+    if not MT5_AVAILABLE or not st.session_state["mt5_connected"]:
+        # Fallback visual matrix
+        np.random.seed(42)
+        base = 2515.00 if "XAU" in symbol else (56400.00 if "BTC" in symbol else 1.0850)
+        prices = base + np.cumsum(np.random.normal(0, base * 0.0005, 50))
+        return pd.DataFrame({"Timeline Tick": range(50), "Price Node ($)": prices})
+    
+    # Fetch real technical candle arrays
+    rates = mt5.copy_rates_from_now(symbol, mt5.TIMEFRAME_M1, 50)
+    if rates is None:
+        return pd.DataFrame()
+    rates_df = pd.DataFrame(rates)
+    rates_df['time'] = pd.to_datetime(rates_df['time'], unit='s')
+    return rates_df.rename(columns={'time': 'Timeline Tick', 'close': 'Price Node ($)'})
 
 
 # ====================================================================
@@ -114,66 +184,21 @@ else:
     # --- SIDEBAR ENGINE: CONTROL SETTINGS & HARDWARE COUPLING ---
     st.sidebar.header("Market Asset Settings")
     symbol_choice = st.sidebar.selectbox("Tracked Target Instrument", ["XAUUSDm", "BTCUSDm", "EURUSDm"])
-    account_balance = st.sidebar.number_input("Target Account Balance ($)", value=161.53, step=10.0)
+    
+    # Conditional defaults matching physical targets
+    default_bal = 161.53 if not MT5_AVAILABLE or not st.session_state["mt5_connected"] else mt5.account_info().balance
+    account_balance = st.sidebar.number_input("Target Account Balance ($)", value=float(default_bal), step=50.0)
     risk_percentage = st.sidebar.slider("Account Capital Exposure Risk (%)", 1.0, 10.0, 2.0, step=0.5)
     
     st.sidebar.markdown("---")
     st.sidebar.header("🔗 MT5 Node Stream Integrator")
     
     if not st.session_state["mt5_connected"]:
-        mt5_login = st.sidebar.text_input("MT5 Account ID/Login", key="mt5_log")
+        mt5_login = st.sidebar.text_input("MT5 Account ID/Login", key="mt5_log", value="50239102") # Dynamic template values
         mt5_pass = st.sidebar.text_input("MT5 Investor Password", type="password", key="mt5_pwd")
-        mt5_server = st.sidebar.text_input("Broker Server (e.g., Exness-Real)", value="Exness-Trial2")
+        mt5_server = st.sidebar.text_input("Broker Server", value="Exness-Trial2")
         
         if st.sidebar.button("Link Live MT5 Terminal Node", use_container_width=True):
-            if mt5_node_handshake(mt5_login, mt5_pass, mt5_server):
+            success, msg = mt5_live_connect(mt5_login, mt5_pass, mt5_server)
+            if success:
                 st.session_state["mt5_connected"] = True
-                st.session_state["journal_logs"].append({"Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M'), "Event": f"Connected to MT5 Broker Node via Server: {mt5_server}"})
-                st.sidebar.success("MT5 stream connected successfully!")
-                st.rerun()
-            else:
-                st.sidebar.error("Handshake rejected. Verify system login credentials.")
-    else:
-        st.sidebar.success("✅ MT5 Node Protocol: ACTIVE")
-        if st.sidebar.button("Sever Terminal Node", use_container_width=True):
-            st.session_state["mt5_connected"] = False
-            st.session_state["journal_logs"].append({"Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M'), "Event": "MT5 Terminal Node manually decoupled."})
-            st.rerun()
-
-    # --- MAIN COMPONENT METRICS GRID ---
-    m_c1, m_c2, m_c3 = st.columns(3)
-    m_c1.metric(label="ACCOUNT BALANCE CONTEXT", value=f"${account_balance:,.2f}")
-    m_c2.metric(label="TRACKED ASSET FOCUS", value=str(symbol_choice))
-    m_c3.metric(label="RISK ALLOCATION SAFEGUARD", value=f"{risk_percentage}% Layer")
-    
-    # --- MODULE APP ROUTING CHANNELS (TABS) ---
-    tab_desk, tab_charts, tab_journal = st.tabs(["Live Trading Desk", "Market Analytics Charts", "Personal Journal Logs"])
-    
-    # TAB 1: WORKSTATION EXECUTION DESK
-    with tab_desk:
-        st.markdown("<br>### Live Open Position Matrix Grid", unsafe_allow_html=True)
-        trades_df = pd.DataFrame(st.session_state["saas_trades_db"])
-        
-        # Displaying active records clearly
-        st.dataframe(trades_df, use_container_width=True, hide_index=True)
-        
-        st.markdown("<br>### Manual Order Dispatch Gateway Router", unsafe_allow_html=True)
-        o_c1, o_c2, o_c3 = st.columns([2, 2, 1])
-        direction = o_c1.radio("Transaction Vector Direction", ["BUY LIMIT", "SELL LIMIT"], horizontal=True)
-        
-        default_price = 2515.20 if "XAU" in symbol_choice else (56420.00 if "BTC" in symbol_choice else 1.0855)
-        entry_input = o_c2.number_input("Target Entry Price", value=default_price, format="%.5f")
-        lot_size = o_c3.number_input("Lot Volume Size", value=0.01, step=0.01, format="%.2f")
-        
-        if st.button("🚀 TRANSMIT ORDER MATRIX TO MT5 LIVE NODE", type="primary", use_container_width=True):
-            new_trade = {
-                "Ticket": f"TX-{random.randint(50000, 99999)}",
-                "Asset": symbol_choice,
-                "Type": direction,
-                "Lots": lot_size,
-                "Entry": entry_input,
-                "Status": "Pending" if "LIMIT" in direction else "Active",
-                "PnL": 0.00,
-                "Timestamp": datetime.now().strftime('%Y-%m-%d %H:%M')
-            }
-            st.session_state["saas_trades_db"].append(new_trade)
