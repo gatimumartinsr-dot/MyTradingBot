@@ -37,7 +37,8 @@ BG, SURFACE, TEXT = "#161826", "#232532", "#e9e9ed"
 ACCENT, A300, A800 = "#9184d9", "#d2cefd", "#423a6a"
 UP, DOWN, MUTED = "#7fbf9a", "#d98a94", "#9397ab"
 
-st.set_page_config(page_title="Zonelock", layout="wide", page_icon="◈")
+st.set_page_config(page_title="Zonelock", layout="wide", page_icon="◈",
+                   initial_sidebar_state="auto")
 
 st.markdown(f"""
 <style>
@@ -64,6 +65,17 @@ st.markdown(f"""
   .zl-tag {{ display:inline-block; font-size:10px; padding:3px 9px; border-radius:6px;
       background:#3f424d; color:#f3f5fe; margin-right:5px; white-space:nowrap; }}
   .zl-muted {{ color:{MUTED}; font-size:11.5px; line-height:1.5; }}
+  [data-testid='stMetricValue'] {{ font-size:21px !important; }}
+  .stTabs [data-baseweb='tab-list'] {{ overflow-x:auto; flex-wrap:nowrap; }}
+  @media (max-width:768px) {{
+      .block-container {{ padding:1rem 0.8rem 3rem !important; }}
+      [data-testid='stMetricValue'] {{ font-size:17px !important; }}
+      [data-testid='stMetric'] {{ padding:10px !important; }}
+      h1 {{ font-size:26px !important; }} h2 {{ font-size:21px !important; }}
+      .stTabs [data-baseweb='tab'] {{ padding:8px 11px !important; font-size:12px !important; }}
+      [data-testid='stDataFrame'] {{ font-size:11px; }}
+      [data-testid='column'] {{ min-width:100% !important; }}
+  }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,7 +94,7 @@ for k, v in DEFAULTS.items():
     st.session_state.setdefault(k, v)
 
 
-def go(stage: str):
+def goto(stage: str):
     st.session_state["stage"] = stage
     st.rerun()
 
@@ -205,6 +217,17 @@ def chart(symbol: str, df: pd.DataFrame, rules: Rules) -> go.Figure:
     return fig
 
 
+def safe(fn, label):
+    """Render a tab; show the real error inline instead of killing the page."""
+    try:
+        fn()
+    except Exception as exc:
+        st.error(f"{label} could not render: {type(exc).__name__} — {exc}")
+        with st.expander("Details"):
+            import traceback
+            st.code(traceback.format_exc())
+
+
 # ──────────────────────────────────────────────────────────────────────
 # Face 1 — login
 # ──────────────────────────────────────────────────────────────────────
@@ -226,7 +249,7 @@ def face_login():
             if st.button("Sign in", use_container_width=True):
                 if email and pwd:
                     st.session_state.update(email=email, user=email.split("@")[0].title())
-                    go("app")
+                    goto("app")
                 else:
                     st.error("Enter your email and password.")
         with tab_up:
@@ -236,7 +259,7 @@ def face_login():
             if st.button("Create account", use_container_width=True):
                 if name and email2 and len(pwd2) >= 6:
                     st.session_state.update(user=name, email=email2)
-                    go("creds")
+                    goto("creds")
                 else:
                     st.error("Name, email and a password of 6+ characters.")
         st.caption("Your Zonelock login is separate from your broker. You link MT5 next.")
@@ -271,9 +294,9 @@ def face_creds():
                 st.session_state["mt5_note"] = note
                 st.session_state["accounts"].append(
                     {"broker": b["broker"], "server": b["server"], "login": b["login"], "live": ok, "primary": True})
-                go("setup")
+                goto("setup")
         if c2.button("Skip for now", use_container_width=True):
-            go("setup")
+            goto("setup")
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -307,7 +330,7 @@ def face_setup():
 
         st.write("")
         if st.button("Arm the bot", use_container_width=True):
-            go("app")
+            goto("app")
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -344,7 +367,7 @@ def face_app():
 
     desk, charts, jrnl, rules_tab, account = st.tabs(["Desk", "Charts", "Journal", "Rules", "Account"])
 
-    with desk:
+    def _desk():
         realised = round(sum(float(x.get("pnl", 0.0)) for x in taken), 2)
         cap_pct = (realised / r.daily_profit_cap) if r.daily_profit_cap else 0.0
         k1, k2, k3, k4 = st.columns(4)
@@ -369,12 +392,12 @@ def face_app():
         st.markdown("##### Open positions")
         st.dataframe(positions(), use_container_width=True, hide_index=True)
 
-    with charts:
+    def _charts():
         st.plotly_chart(chart(symbol, df, r), use_container_width=True)
         st.caption("Support and resistance from clustered swing points · unfilled fair value gaps · "
                    "order blocks validated by BOS or CHoCH.")
 
-    with jrnl:
+    def _journal():
         t_taken, t_passed, t_stats = st.tabs(["Taken", "Not taken", "Stats"])
         with t_taken:
             if taken:
@@ -397,12 +420,12 @@ def face_app():
         with t_stats:
             if passed:
                 counts = pd.Series([x["verdict"] for x in passed]).value_counts()
-                st.bar_chart(pd.DataFrame({"count": counts}), color=ACCENT, horizontal=True)
+                st.bar_chart(pd.DataFrame({"count": counts}), color=ACCENT)
                 st.caption("Why setups were turned down.")
             else:
                 st.info("Stats appear once the engine has logged decisions.")
 
-    with rules_tab:
+    def _rules():
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("##### Entry rules")
@@ -424,7 +447,7 @@ def face_app():
         st.session_state["rules"] = r
         st.caption("Changes apply on the next candle close.")
 
-    with account:
+    def _account():
         c1, c2 = st.columns([1.3, 1])
         with c1:
             st.markdown("##### Trading accounts")
@@ -471,6 +494,13 @@ def face_app():
             st.markdown("<span class='zl-tag'>iPhone</span><span class='zl-tag'>Android</span>"
                         "<span class='zl-tag'>Windows tablet</span><span class='zl-tag'>Browser</span>",
                         unsafe_allow_html=True)
+
+
+    for tab, fn, label in ((desk, _desk, "Desk"), (charts, _charts, "Charts"),
+                           (jrnl, _journal, "Journal"), (rules_tab, _rules, "Rules"),
+                           (account, _account, "Account")):
+        with tab:
+            safe(fn, label)
 
 
 # ──────────────────────────────────────────────────────────────────────
