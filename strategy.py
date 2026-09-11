@@ -520,3 +520,72 @@ def evaluate(symbol: str, df: pd.DataFrame, *, balance: float,
         headline=f"{pattern.capitalize()} closed inside the {zone.low:.5f}–{zone.high:.5f} "
                  f"{zone.kind}" + (f" with a {ob.direction} order block at {ob.event}." if ob else "."),
     )
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Daily candle zones — the higher-timeframe map a manual trader draws first
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class DailyLevel:
+    name: str
+    price: float
+    kind: str        # "resistance" | "support" | "pivot"
+
+    def distance(self, price: float) -> float:
+        return abs(self.price - price)
+
+
+def daily_zones(daily: pd.DataFrame, price: float) -> List[DailyLevel]:
+    """
+    The levels worth marking from daily candles: yesterday's high, low and
+    close, the current week's extremes, and the classic floor pivot set.
+    Pass a D1 frame; returns them sorted by distance from price.
+    """
+    if daily is None or len(daily) < 3:
+        return []
+
+    y = daily.iloc[-2]                       # yesterday: the last CLOSED day
+    yh, yl, yc = float(y["high"]), float(y["low"]), float(y["close"])
+    today = daily.iloc[-1]
+
+    pivot = (yh + yl + yc) / 3
+    r1, s1 = 2 * pivot - yl, 2 * pivot - yh
+    r2, s2 = pivot + (yh - yl), pivot - (yh - yl)
+
+    week = daily.tail(5)
+    wh, wl = float(week["high"].max()), float(week["low"].min())
+
+    out = [
+        DailyLevel("Yesterday high", yh, "resistance" if yh > price else "support"),
+        DailyLevel("Yesterday low", yl, "support" if yl < price else "resistance"),
+        DailyLevel("Yesterday close", yc, "pivot"),
+        DailyLevel("Today open", float(today["open"]), "pivot"),
+        DailyLevel("Week high", wh, "resistance" if wh > price else "support"),
+        DailyLevel("Week low", wl, "support" if wl < price else "resistance"),
+        DailyLevel("Pivot", pivot, "pivot"),
+        DailyLevel("R1", r1, "resistance"), DailyLevel("S1", s1, "support"),
+        DailyLevel("R2", r2, "resistance"), DailyLevel("S2", s2, "support"),
+    ]
+    return sorted(out, key=lambda l: l.distance(price))
+
+
+def confluence(decision: "Decision", levels: List[DailyLevel], atr_value: float) -> List[str]:
+    """Daily levels sitting on top of the entry — the reason a setup is A-grade."""
+    if not decision.entry or not levels:
+        return []
+    near = atr_value * 0.6
+    return [l.name for l in levels if l.distance(decision.entry) <= near]
+
+
+def grade(decision: "Decision", confluences: List[str]) -> str:
+    """A / B / C, the way you'd rank setups by eye before taking one."""
+    if not decision.taken:
+        return "—"
+    score = 0
+    score += 2 if (decision.rr or 0) >= 2.5 else 1 if (decision.rr or 0) >= 2 else 0
+    score += min(len(confluences), 2)
+    tags = " ".join(decision.tags).lower()
+    score += 1 if "bos" in tags or "choch" in tags else 0
+    score += 1 if "fvg" in tags else 0
+    return "A" if score >= 5 else "B" if score >= 3 else "C"
