@@ -589,3 +589,146 @@ def grade(decision: "Decision", confluences: List[str]) -> str:
     score += 1 if "bos" in tags or "choch" in tags else 0
     score += 1 if "fvg" in tags else 0
     return "A" if score >= 5 else "B" if score >= 3 else "C"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Multi-timeframe reading
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class TFRead:
+    """What one timeframe says, on its own."""
+    timeframe: str
+    bias: str              # "bullish" | "bearish" | "range"
+    structure: str         # BOS / CHoCH / none
+    at_zone: str           # "support" | "resistance" | "mid-range"
+    reversal: Optional[str]
+    price: float
+    nearest_support: Optional[float] = None
+    nearest_resistance: Optional[float] = None
+    unfilled_fvgs: int = 0
+    order_block: Optional[str] = None
+
+    @property
+    def score(self) -> int:
+        return {"bullish": 1, "bearish": -1}.get(self.bias, 0)
+
+
+def read_timeframe(timeframe: str, df: pd.DataFrame,
+                   rules: Optional[Rules] = None) -> TFRead:
+    """A standalone verdict for one timeframe — no trade, just the reading."""
+    rules = rules or Rules()
+    price = float(df["close"].iloc[-1])
+    st = market_structure(df, rules)
+
+    zones = build_zones(df, rules)
+    sup = nearest_zone(zones, price, "support")
+    res = nearest_zone(zones, price, "resistance")
+
+    at = "mid-range"
+    if sup and sup.contains(price, rules.zone_touch_tolerance):
+        at = "support"
+    elif res and res.contains(price, rules.zone_touch_tolerance):
+        at = "resistance"
+
+    bias = st.direction if st.direction in ("bullish", "bearish") else "range"
+    if st.event == "none" and bias == "range":
+        # fall back to where price sits in its own recent range
+        window = df.tail(60)
+        span = float(window["high"].max()) - float(window["low"].min())
+        if span > 0:
+            pos = (price - float(window["low"].min())) / span
+            bias = "bullish" if pos > 0.62 else "bearish" if pos < 0.38 else "range"
+
+    want = "BUY" if at == "support" else "SELL" if at == "resistance" else None
+    rev = reversal_candle(df, want, rules) if want else None
+
+    obs = order_blocks(df, rules)
+    gaps = [g for g in find_fvgs(df, rules) if not g.filled]
+
+    return TFRead(
+        timeframe=timeframe, bias=bias, structure=st.event, at_zone=at, reversal=rev,
+        price=price,
+        nearest_support=sup.mid if sup else None,
+        nearest_resistance=res.mid if res else None,
+        unfilled_fvgs=len(gaps),
+        order_block=f"{obs[0].direction} {obs[0].event}" if obs else None,
+    )
+
+
+@dataclass
+class MTFView:
+    reads: Dict[str, TFRead]
+    alignment: str          # "bullish" | "bearish" | "mixed"
+    agreement: float        # 0–1, how much of the ladder agrees
+    htf_bias: str           # what the slowest available timeframe says
+    summary: str
+
+    def agrees_with(self, direction: Optional[str]) -> bool:
+        if not direction:
+            return False
+        want = "bullish" if direction == "BUY" else "bearish"
+        return self.alignment == want
+
+
+def multi_timeframe(frames: Dict[str, pd.DataFrame],
+                    rules: Optional[Rules] = None,
+                    weights: Optional[Dict[str, float]] = None) -> MTFView:
+    """
+    Read every timeframe given and combine them, slower frames weighing more.
+    frames: {"M15": df, "H1": df, "H4": df, "D1": df}
+    """
+    rules = rules or Rules()
+    weights = weights or {"M5": 0.5, "M15": 1.0, "M30": 1.2,
+                          "H1": 1.6, "H4": 2.2, "D1": 3.0, "W1": 3.4}
+
+    reads: Dict[str, TFRead] = {}
+    for tf, df in frames.items():
+        if df is None or len(df) < 60:
+            continue
+        try:
+            reads[tf] = read_timeframe(tf, df, rules)
+        except Exception:
+            continue
+
+    if not reads:
+        return MTFView({}, "mixed", 0.0, "unknown", "No timeframe data available.")
+
+    total = sum(weights.get(tf, 1.0) for tf in reads)
+    signed = sum(weights.get(tf, 1.0) * r.score for tf, r in reads.items())
+    ratio = signed / total if total else 0.0
+
+    alignment = "bullish" if ratio >= 0.45 else "bearish" if ratio <= -0.45 else "mixed"
+    agreement = round(abs(ratio), 2)
+
+    order = ["W1", "D1", "H4", "H1", "M30", "M15", "M5"]
+    htf = next((reads[t].bias for t in order if t in reads), "unknown")
+
+    agreeing = [t for t, r in reads.items()
+                if (r.bias == alignment)] if alignment != "mixed" else []
+    if alignment == "mixed":
+        summary = (f"Timeframes disagree — "
+                   + ", ".join(f"{t} {r.bias}" for t, r in reads.items()) + ".")
+    else:
+        summary = (f"{', '.join(agreeing)} all read {alignment}"
+                   f" ({int(agreement*100)}% weighted agreement), higher timeframe {htf}.")
+
+    return MTFView(reads, alignment, agreement, htf, summary)
+
+
+def mtf_grade(decision: "Decision", view: MTFView, confluences: List[str]) -> str:
+    """Grade a setup with the timeframe stack folded in."""
+    if not decision.taken:
+        return "—"
+    score = 0
+    rr = decision.rr or 0
+    score += 2 if rr >= 2.5 else 1 if rr >= 2 else 0
+    score += min(len(confluences), 2)
+    tags = " ".join(decision.tags).lower()
+    score += 1 if ("bos" in tags or "choch" in tags) else 0
+    score += 1 if "fvg" in tags else 0
+    if view.agrees_with(decision.direction):
+        score += 2 if view.agreement >= 0.7 else 1
+    elif view.alignment != "mixed":
+        score -= 2                      # trading against the stack
+    return "A" if score >= 6 else "B" if score >= 4 else "C"

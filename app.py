@@ -1,8 +1,8 @@
 """
-app.py — Zonelock: support & resistance setup scanner.
+app.py — Zonelock: multi-timeframe support & resistance scanner.
 
-Reads free market data, applies your rules, and hands you trade setups to
-place yourself on MT5. No broker connection, no credentials, no Windows.
+Reads free market data across M5→W1, applies your rules on each, and hands
+you setups to place yourself on MT5. No broker, no credentials, no Windows.
 
     pip install -r requirements.txt
     streamlit run app.py
@@ -13,72 +13,113 @@ import os
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from market import SYMBOLS, DataError, fetch, pips
+from market import (MTF_LADDER, SYMBOLS, TIMEFRAMES, DataError, cache_age,
+                    fetch, pips)
 from strategy import (Rules, atr, build_zones, confluence, daily_zones,
-                      evaluate, find_fvgs, grade, order_blocks)
+                      evaluate, find_fvgs, mtf_grade, multi_timeframe,
+                      order_blocks)
 
 PICKS = os.environ.get("ZONELOCK_PICKS", "picks.jsonl")
 
+# Nocturne tokens
 BG, SURFACE, RAISED = "#161826", "#1e2030", "#252838"
 TEXT, MUTED, FAINT = "#e9e9ed", "#9397ab", "#5f6376"
-ACCENT, A300, A800 = "#9184d9", "#d2cefd", "#3a3360"
+ACCENT, A300, A700, A800 = "#9184d9", "#d2cefd", "#5d5294", "#3a3360"
 UP, DOWN, WARN = "#5fbf8f", "#e07b87", "#d9b26a"
-LINE = "rgba(233,233,237,.09)"
-GRADE_COLOR = {"A": UP, "B": A300, "C": WARN, "—": FAINT}
+LINE = "rgba(233,233,237,.10)"
+GRADE = {"A": UP, "B": A300, "C": WARN, "—": FAINT}
 
-st.set_page_config(page_title="Zonelock Scanner", layout="wide", page_icon="◈",
+st.set_page_config(page_title="Zonelock", layout="wide", page_icon="◈",
                    initial_sidebar_state="collapsed")
 
 st.markdown(f"""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-  html, body, [data-testid='stAppViewContainer'] {{ background:{BG} !important;
-      color:{TEXT} !important; font-family:Inter, system-ui, sans-serif;
-      -webkit-font-smoothing:antialiased; }}
-  [data-testid='stHeader'], [data-testid='stToolbar'], [data-testid='stDecoration'] {{
-      display:none !important; height:0 !important; }}
+
+  html, body, [data-testid='stAppViewContainer'], [data-testid='stMain'] {{
+      background:{BG} !important; color:{TEXT} !important;
+      font-family:Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }}
+  [data-testid='stHeader'], [data-testid='stToolbar'], [data-testid='stDecoration'],
+  [data-testid='stStatusWidget'] {{ display:none !important; height:0 !important; }}
   [data-testid='stSidebar'] {{ background:{SURFACE} !important; border-right:1px solid {LINE}; }}
-  .block-container {{ padding:0.9rem 1.4rem 4rem !important; max-width:1500px; }}
+  .block-container {{ padding:0.85rem 1.4rem 4rem !important; max-width:1560px; }}
   #MainMenu, footer {{ visibility:hidden; }}
+  ::selection {{ background:{A800}; color:{TEXT}; }}
+  *:focus-visible {{ outline:2px solid {ACCENT} !important; outline-offset:2px !important; }}
+
   h1,h2,h3,h4,h5,h6 {{ font-weight:500 !important; letter-spacing:-.015em; color:{TEXT} !important; }}
+  p, span, div, label {{ color:{TEXT}; }}
   .mono {{ font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums; }}
 
+  /* tabs */
   .stTabs [data-baseweb='tab-list'] {{ position:sticky; top:0; z-index:99; gap:2px;
       background:{BG}; padding:6px 0 0; margin-bottom:14px; border-bottom:1px solid {LINE};
       overflow-x:auto; flex-wrap:nowrap; scrollbar-width:none; }}
   .stTabs [data-baseweb='tab-list']::-webkit-scrollbar {{ display:none; }}
   .stTabs [data-baseweb='tab'] {{ background:transparent !important; color:{MUTED} !important;
       padding:9px 15px !important; font-size:13px !important; font-weight:500 !important;
-      white-space:nowrap; border-radius:7px 7px 0 0; }}
+      white-space:nowrap; border-radius:8px 8px 0 0; transition:color .15s ease; }}
+  .stTabs [data-baseweb='tab']:hover {{ color:{A300} !important;
+      background:rgba(145,132,217,.07) !important; }}
   .stTabs [aria-selected='true'] {{ color:{TEXT} !important; background:{SURFACE} !important;
       border-bottom:2px solid {ACCENT} !important; }}
   .stTabs [data-baseweb='tab-highlight'], .stTabs [data-baseweb='tab-border'] {{ display:none !important; }}
 
-  .stButton>button {{ background:transparent; border:1px solid {ACCENT}; color:{A300};
-      border-radius:8px; font-weight:500; font-size:13.5px; padding:8px 16px; }}
-  .stButton>button:hover {{ background:rgba(145,132,217,.14); border-color:{ACCENT}; color:{A300}; }}
-  .stButton>button:focus:not(:active) {{ border-color:{ACCENT}; color:{A300}; }}
-  [data-testid='stSlider'] div[role='slider'] {{ background:{ACCENT} !important; box-shadow:none !important; }}
-  [data-testid='stSlider'] [data-testid='stThumbValue'] {{ color:{A300} !important; }}
-  [data-testid='stSlider'] [data-testid='stTickBar'] {{ display:none !important; }}
-  [data-baseweb='radio'] div[aria-checked='true'] {{ background:{ACCENT} !important; border-color:{ACCENT} !important; }}
-  [data-testid='stCheckbox'] [aria-checked='true'], [data-testid='stToggle'] [aria-checked='true'] {{
-      background:{ACCENT} !important; }}
-  [data-testid='stProgress'] > div > div > div {{ background:{ACCENT} !important; }}
-  .stTextInput input, .stNumberInput input, [data-baseweb='select'] > div {{
-      background:{RAISED} !important; border-color:{LINE} !important; color:{TEXT} !important;
-      border-radius:8px !important; }}
-  .stTextInput input:focus {{ border-color:{ACCENT} !important; box-shadow:0 0 0 1px {ACCENT} !important; }}
+  /* buttons — outlined, per Nocturne */
+  .stButton>button, .stDownloadButton>button {{ background:transparent !important;
+      border:1px solid {ACCENT} !important; color:{A300} !important; border-radius:8px !important;
+      font-weight:500 !important; font-size:13.5px !important; padding:8px 16px !important;
+      transition:background .15s ease, border-color .15s ease !important; }}
+  .stButton>button:hover, .stDownloadButton>button:hover {{
+      background:rgba(145,132,217,.14) !important; border-color:{ACCENT} !important;
+      color:{A300} !important; }}
+  .stButton>button:active {{ background:rgba(145,132,217,.24) !important; }}
+  .stButton>button:focus:not(:active) {{ border-color:{ACCENT} !important; color:{A300} !important; }}
+
+  /* every control in the accent hue — never Streamlit red */
+  [data-baseweb='radio'] [aria-checked='true'] > div:first-child,
+  [data-baseweb='radio'] div[aria-checked='true'] {{
+      background-color:{ACCENT} !important; border-color:{ACCENT} !important; }}
+  [data-testid='stRadio'] [role='radiogroup'] > label > div:first-child {{
+      border-color:{FAINT} !important; }}
+  [data-testid='stRadio'] [role='radiogroup'] > label[data-checked='true'] > div:first-child,
+  [data-testid='stRadio'] input:checked + div {{
+      background-color:{ACCENT} !important; border-color:{ACCENT} !important; }}
+  [data-testid='stCheckbox'] [data-checked='true'],
+  [data-testid='stCheckbox'] [aria-checked='true'],
+  [data-testid='stToggle'] [aria-checked='true'],
+  [data-testid='stToggle'] [data-checked='true'] {{
+      background-color:{ACCENT} !important; border-color:{ACCENT} !important; }}
+  [data-baseweb='checkbox'] span[aria-checked='true'],
+  [data-baseweb='toggle'] div[aria-checked='true'] {{ background-color:{ACCENT} !important; }}
+  [data-baseweb='slider'] div[role='slider'] {{ background:{ACCENT} !important;
+      box-shadow:none !important; border-color:{ACCENT} !important; }}
+  [data-baseweb='slider'] [data-testid='stThumbValue'] {{ color:{A300} !important; }}
+  [data-testid='stSliderTickBar'], [data-testid='stTickBar'] {{ display:none !important; }}
+  [data-testid='stProgress'] > div > div > div {{ background-color:{ACCENT} !important; }}
+  [data-baseweb='tag'] {{ background-color:{A800} !important; color:{A300} !important; }}
+  [data-baseweb='tag'] svg {{ fill:{A300} !important; }}
+
+  .stTextInput input, .stNumberInput input, [data-baseweb='select'] > div,
+  [data-baseweb='input'] {{ background:{RAISED} !important; border-color:{LINE} !important;
+      color:{TEXT} !important; border-radius:8px !important; }}
+  .stTextInput input:focus, .stNumberInput input:focus {{ border-color:{ACCENT} !important;
+      box-shadow:0 0 0 1px {ACCENT} !important; }}
+  [data-testid='stExpander'] {{ background:{SURFACE} !important; border:1px solid {LINE} !important;
+      border-radius:10px !important; }}
+  [data-testid='stExpander'] summary:hover {{ color:{A300} !important; }}
   a, a:visited {{ color:{A300} !important; text-decoration:none; }}
   a:hover {{ color:{ACCENT} !important; }}
-  code {{ background:{RAISED} !important; color:{A300} !important; }}
+  code {{ background:{RAISED} !important; color:{A300} !important; border-radius:6px; }}
+  [data-testid='stDataFrame'] {{ border:1px solid {LINE}; border-radius:9px; overflow:hidden; }}
 
+  /* furniture */
   .zl-strip {{ display:flex; align-items:center; gap:18px; flex-wrap:wrap;
       background:linear-gradient(135deg,{RAISED},{SURFACE} 62%); border:1px solid {LINE};
       border-radius:10px; padding:13px 16px; margin-bottom:12px; }}
@@ -92,7 +133,8 @@ st.markdown(f"""
   .zl-kicker {{ font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:{ACCENT}; }}
   .zl-muted {{ color:{MUTED}; font-size:12px; line-height:1.55; }}
   .zl-chip {{ display:inline-block; font-size:10px; letter-spacing:.06em; padding:3px 9px;
-      border-radius:5px; background:{RAISED}; color:{TEXT}; margin-right:5px; white-space:nowrap; }}
+      border-radius:5px; background:{RAISED}; color:{TEXT}; margin-right:5px;
+      margin-bottom:3px; white-space:nowrap; }}
   .zl-row {{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid {LINE}; }}
   .zl-row:last-child {{ border-bottom:none; }}
   .zl-lv {{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:11px;
@@ -103,14 +145,20 @@ st.markdown(f"""
       align-items:center; justify-content:center; font-size:14px; font-weight:600; flex:none; }}
   .zl-ticket {{ background:{RAISED}; border:1px dashed {ACCENT}; border-radius:9px;
       padding:13px 15px; font-family:'JetBrains Mono', monospace; font-size:12.5px;
-      line-height:1.85; color:{TEXT}; }}
+      line-height:1.9; color:{TEXT}; }}
+  .zl-tf {{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }}
+  .zl-tf-cell {{ background:{SURFACE}; border:1px solid {LINE}; border-radius:9px; padding:11px 12px; }}
+  .zl-tf-cell .tf {{ font-size:11px; letter-spacing:.1em; color:{FAINT}; }}
+  .zl-tf-cell .bias {{ font-size:15px; font-weight:500; margin-top:3px; }}
+  .zl-bar {{ height:5px; border-radius:3px; background:{RAISED}; overflow:hidden; margin-top:8px; }}
 
   @media (max-width:820px) {{
-      .block-container {{ padding:0.7rem 0.75rem 4rem !important; }}
+      .block-container {{ padding:0.6rem 0.7rem 4rem !important; }}
       .zl-stats {{ grid-template-columns:repeat(2,1fr); gap:7px; }}
       .zl-stat {{ padding:9px 11px; }} .zl-stat .v {{ font-size:16px; }}
-      .zl-strip {{ gap:12px; padding:11px 13px; }}
-      .stTabs [data-baseweb='tab'] {{ padding:8px 11px !important; font-size:12px !important; }}
+      .zl-strip {{ gap:11px; padding:11px 13px; }}
+      .zl-tf {{ grid-template-columns:repeat(2,1fr); }}
+      .stTabs [data-baseweb='tab'] {{ padding:8px 10px !important; font-size:12px !important; }}
       [data-testid='column'] {{ min-width:100% !important; }}
       .zl-lv {{ grid-template-columns:repeat(2,1fr); }}
   }}
@@ -122,9 +170,10 @@ st.markdown(f"""
 
 DEFAULTS = {
     "stage": "login", "user": "", "email": "", "rules": Rules(),
-    "symbol": "XAUUSD", "scan": None, "scanned_at": None,
-    "tg_token": "", "tg_chat": "", "td_key": "",
-    "account_size": 1000.0, "watch": list(SYMBOLS.keys()),
+    "symbol": "XAUUSD", "tf": "M15", "scan": None, "scanned_at": None,
+    "tg_token": "", "tg_chat": "", "td_key": "", "account_size": 1000.0,
+    "watch": ["XAUUSD", "EURUSD", "GBPUSD", "US30", "NAS100", "BTCUSD"],
+    "ladder": list(MTF_LADDER),
 }
 for k, v in DEFAULTS.items():
     st.session_state.setdefault(k, v)
@@ -174,9 +223,9 @@ def economic_calendar():
 
 @st.cache_data(ttl=600, show_spinner=False)
 def headlines(limit: int = 12):
-    for source, url in [("Investing.com", "https://www.investing.com/rss/news_1.rss"),
-                        ("FXStreet", "https://www.fxstreet.com/rss/news"),
-                        ("Reuters", "https://feeds.reuters.com/reuters/businessNews")]:
+    for src, url in [("Investing.com", "https://www.investing.com/rss/news_1.rss"),
+                     ("FXStreet", "https://www.fxstreet.com/rss/news"),
+                     ("Reuters", "https://feeds.reuters.com/reuters/businessNews")]:
         try:
             root = ET.fromstring(_get(url))
             items = []
@@ -184,7 +233,7 @@ def headlines(limit: int = 12):
                 t = (it.findtext("title") or "").strip()
                 if t:
                     items.append({"title": t, "link": (it.findtext("link") or "").strip(),
-                                  "when": (it.findtext("pubDate") or "")[:22], "source": source})
+                                  "when": (it.findtext("pubDate") or "")[:22], "source": src})
                 if len(items) >= limit:
                     break
             if items:
@@ -200,12 +249,10 @@ def next_high_impact(events, now=None):
     return up[0] if up else None
 
 
-# ── alerts ───────────────────────────────────────────────────────────
-
-def telegram(text: str) -> tuple[bool, str]:
+def telegram(text: str):
     tok, chat = st.session_state["tg_token"], st.session_state["tg_chat"]
     if not (tok and chat):
-        return False, "Telegram not configured."
+        return False, "Telegram not configured — see the Alerts tab."
     try:
         url = (f"https://api.telegram.org/bot{tok}/sendMessage?chat_id={chat}"
                f"&parse_mode=HTML&text={urllib.parse.quote(text)}")
@@ -215,31 +262,44 @@ def telegram(text: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-# ── the scan ─────────────────────────────────────────────────────────
+# ── analysis ─────────────────────────────────────────────────────────
 
-@st.cache_data(ttl=180, show_spinner=False)
-def candles(symbol: str, interval: str, limit: int, td_key: str):
-    return fetch(symbol, interval, limit, td_key)
+def analyse(symbol: str, rules: Rules, td_key: str, ladder=None, base=None) -> dict:
+    """One symbol read across the timeframe ladder."""
+    ladder = ladder or st.session_state["ladder"]
+    base = base or st.session_state["tf"]
+    frames, missing = {}, []
 
+    for tf in dict.fromkeys([base, *ladder]):
+        try:
+            frames[tf] = fetch(symbol, tf, 400, td_key)
+        except Exception as exc:
+            missing.append(f"{tf}: {exc}")
 
-def analyse(symbol: str, rules: Rules, td_key: str) -> dict:
-    m15 = candles(symbol, "15m", 400, td_key)
-    try:
-        d1 = candles(symbol, "1d", 120, td_key)
-    except Exception:
-        d1 = None
+    if base not in frames:
+        raise DataError(f"{symbol} {base} unavailable · " + " · ".join(missing))
 
-    price = float(m15["close"].iloc[-1])
-    a = atr(m15, 14)
+    primary = frames[base]
+    price = float(primary["close"].iloc[-1])
+    a = atr(primary, 14)
+
+    d1 = frames.get("D1")
+    if d1 is None:
+        try:
+            d1 = fetch(symbol, "D1", 120, td_key)
+        except Exception:
+            d1 = None
     levels = daily_zones(d1, price) if d1 is not None else []
 
-    dec = evaluate(symbol, m15, balance=st.session_state["account_size"],
+    view = multi_timeframe({k: v for k, v in frames.items() if k in ladder or k == base}, rules)
+    dec = evaluate(symbol, primary, balance=st.session_state["account_size"],
                    tick_value=1.0, tick_size=SYMBOLS[symbol]["pip"], rules=rules)
     conf = confluence(dec, levels, a) if dec.taken else []
 
-    return {"symbol": symbol, "decision": dec, "price": price, "atr": a,
-            "levels": levels, "confluence": conf, "grade": grade(dec, conf),
-            "m15": m15, "d1": d1}
+    return {"symbol": symbol, "tf": base, "decision": dec, "price": price, "atr": a,
+            "levels": levels, "confluence": conf, "view": view,
+            "grade": mtf_grade(dec, view, conf), "frames": frames, "missing": missing,
+            "primary": primary, "d1": d1}
 
 
 def run_scan(rules: Rules):
@@ -247,10 +307,10 @@ def run_scan(rules: Rules):
     watch = st.session_state["watch"]
     bar = st.progress(0.0, text="Scanning…")
     for i, sym in enumerate(watch, 1):
-        bar.progress(i / len(watch), text=f"Scanning {sym}…")
+        bar.progress(i / len(watch), text=f"{sym} · {' · '.join(st.session_state['ladder'])}")
         try:
             out.append(analyse(sym, rules, st.session_state["td_key"]))
-        except (DataError, Exception) as exc:
+        except Exception as exc:
             failed.append(f"{sym}: {exc}")
     bar.empty()
     order = {"A": 0, "B": 1, "C": 2, "—": 3}
@@ -259,16 +319,26 @@ def run_scan(rules: Rules):
     st.session_state["scanned_at"] = datetime.now(timezone.utc)
 
 
+def cached_row(symbol: str, rules: Rules):
+    scan = st.session_state["scan"]
+    hit = next((x for x in (scan["rows"] if scan else [])
+                if x["symbol"] == symbol and x["tf"] == st.session_state["tf"]), None)
+    if hit:
+        return hit
+    with st.spinner(f"Analysing {symbol}…"):
+        return analyse(symbol, rules, st.session_state["td_key"])
+
+
 def log_pick(row: dict):
-    d = row["decision"]
-    entry = {"at": datetime.now(timezone.utc).isoformat(), "symbol": row["symbol"],
-             "mt5": SYMBOLS[row["symbol"]]["mt5"], "grade": row["grade"],
-             "direction": d.direction, "entry": d.entry, "sl": d.stop_loss,
-             "tp": d.take_profit, "rr": d.rr, "lots": d.lots,
-             "headline": d.headline, "tags": d.tags,
-             "confluence": row["confluence"], "outcome": "pending"}
+    d, sym = row["decision"], row["symbol"]
     with open(PICKS, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
+        f.write(json.dumps({
+            "at": datetime.now(timezone.utc).isoformat(), "symbol": sym,
+            "mt5": SYMBOLS[sym]["mt5"], "tf": row["tf"], "grade": row["grade"],
+            "direction": d.direction, "entry": d.entry, "sl": d.stop_loss,
+            "tp": d.take_profit, "rr": d.rr, "lots": d.lots, "headline": d.headline,
+            "tags": d.tags, "confluence": row["confluence"],
+            "alignment": row["view"].alignment, "outcome": "pending"}) + "\n")
 
 
 def picks(limit: int = 200):
@@ -279,11 +349,22 @@ def picks(limit: int = 200):
     return rows[-limit:][::-1]
 
 
+def ticket_text(row: dict) -> str:
+    d, sym = row["decision"], row["symbol"]
+    dig = SYMBOLS[sym]["digits"]
+    return (f"<b>{row['grade']}-grade · {SYMBOLS[sym]['mt5']} {d.direction}</b>\n"
+            f"{row['tf']} · {row['view'].alignment} stack\n\n"
+            f"Entry <code>{d.entry:,.{dig}f}</code>\n"
+            f"SL <code>{d.stop_loss:,.{dig}f}</code>\n"
+            f"TP <code>{d.take_profit:,.{dig}f}</code>\n"
+            f"{d.lots:.2f} lots · {d.rr}R\n\n{d.headline}")
+
+
 # ── chart ────────────────────────────────────────────────────────────
 
 def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> go.Figure:
-    symbol, df = row["symbol"], row["m15"]
-    digits = SYMBOLS[symbol]["digits"]
+    symbol, df = row["symbol"], row["primary"]
+    dig = SYMBOLS[symbol]["digits"]
     zones = build_zones(df, rules)
     gaps = [g for g in find_fvgs(df, rules) if not g.filled]
     blocks = order_blocks(df, rules)
@@ -320,19 +401,18 @@ def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> 
         if (hi - lo) < floor_h:
             mid = (lo + hi) / 2
             lo, hi = mid - floor_h / 2, mid + floor_h / 2
-        fig.add_shape(type="rect", x0=start or t0, x1=right, y0=lo, y1=hi,
-                      fillcolor=fill, layer="below",
-                      line=dict(color=edge, width=1, dash=dash or "solid"))
+        fig.add_shape(type="rect", x0=start or t0, x1=right, y0=lo, y1=hi, fillcolor=fill,
+                      layer="below", line=dict(color=edge, width=1, dash=dash or "solid"))
         fig.add_annotation(x=start or t0, y=hi, text=f" {label} ", showarrow=False,
                            xanchor="left", yanchor="bottom", bgcolor="rgba(22,24,38,.88)",
                            borderpad=2, font=dict(size=9.5, color=edge, family="Inter"))
 
     if near_sup:
         band(near_sup.low, near_sup.high, "rgba(95,191,143,.12)", UP,
-             f"SUPPORT {near_sup.mid:,.{digits}f}")
+             f"SUPPORT {near_sup.mid:,.{dig}f}")
     if near_res:
         band(near_res.low, near_res.high, "rgba(224,123,135,.12)", DOWN,
-             f"RESISTANCE {near_res.mid:,.{digits}f}")
+             f"RESISTANCE {near_res.mid:,.{dig}f}")
 
     def x_at(idx):
         off = idx - (len(df) - len(view))
@@ -361,14 +441,14 @@ def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> 
                                 (d.take_profit, UP, "TP")]:
             fig.add_shape(type="line", x0=t1 - step * 25, x1=right, y0=level, y1=level,
                           line=dict(color=col, width=1.4))
-            fig.add_annotation(x=right, y=level, text=f" {tag} {level:,.{digits}f} ",
+            fig.add_annotation(x=right, y=level, text=f" {tag} {level:,.{dig}f} ",
                                showarrow=False, xanchor="left", yanchor="middle",
                                bgcolor=col, borderpad=2,
                                font=dict(size=9.5, color="#161826", family="Inter"))
     else:
         fig.add_shape(type="line", x0=t0, x1=right, y0=price, y1=price,
                       line=dict(color=MUTED, width=1, dash="dot"))
-        fig.add_annotation(x=right, y=price, text=f" {price:,.{digits}f} ", showarrow=False,
+        fig.add_annotation(x=right, y=price, text=f" {price:,.{dig}f} ", showarrow=False,
                            xanchor="left", yanchor="middle", bgcolor=A300, borderpad=3,
                            font=dict(size=10.5, color="#161826", family="Inter"))
 
@@ -382,15 +462,51 @@ def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> 
                    range=[t0, right], showspikes=True, spikemode="across", spikesnap="cursor",
                    spikethickness=1, spikedash="dot", spikecolor="rgba(233,233,237,.25)"),
         yaxis=dict(gridcolor=LINE, side="right", zeroline=False, range=[y_lo, y_hi],
-                   tickformat=f",.{digits}f"))
+                   tickformat=f",.{dig}f"))
     return fig
+
+
+def mtf_panel(row: dict):
+    """The timeframe stack as a row of cells plus an agreement bar."""
+    view, sym = row["view"], row["symbol"]
+    dig = SYMBOLS[sym]["digits"]
+    col = {"bullish": UP, "bearish": DOWN}.get(view.alignment, WARN)
+
+    cells = ""
+    for tf in ["M5", "M15", "M30", "H1", "H4", "D1", "W1"]:
+        rd = view.reads.get(tf)
+        if not rd:
+            continue
+        c = {"bullish": UP, "bearish": DOWN}.get(rd.bias, FAINT)
+        bits = []
+        if rd.structure != "none":
+            bits.append(rd.structure)
+        if rd.at_zone != "mid-range":
+            bits.append(f"at {rd.at_zone}")
+        if rd.reversal:
+            bits.append(rd.reversal)
+        if rd.unfilled_fvgs:
+            bits.append(f"{rd.unfilled_fvgs} FVG")
+        cells += (f"<div class='zl-tf-cell'><div class='tf'>{tf}</div>"
+                  f"<div class='bias' style='color:{c}'>{rd.bias}</div>"
+                  f"<div class='zl-muted' style='margin-top:4px;font-size:10.5px'>"
+                  f"{' · '.join(bits) or 'no signal'}</div></div>")
+
+    pct = int(view.agreement * 100)
+    card(f"<div style='display:flex;align-items:center;gap:10px;margin-bottom:10px'>"
+         f"<span class='zl-kicker'>Timeframe stack</span>"
+         f"<span style='margin-left:auto;font-size:13px;color:{col};font-weight:500'>"
+         f"{view.alignment.upper()} · {pct}% agreement</span></div>"
+         f"<div class='zl-tf'>{cells}</div>"
+         f"<div class='zl-bar'><div style='width:{pct}%;height:100%;background:{col}'></div></div>"
+         f"<div class='zl-muted' style='margin-top:8px'>{view.summary}</div>")
 
 
 def safe(fn, label):
     try:
         fn()
     except Exception as exc:
-        st.error(f"{label} could not render: {type(exc).__name__} — {exc}")
+        st.error(f"{label}: {type(exc).__name__} — {exc}")
         with st.expander("Details"):
             import traceback
             st.code(traceback.format_exc())
@@ -407,9 +523,8 @@ def face_login():
           <div style='font-size:33px;font-weight:500;letter-spacing:-.025em;line-height:1.15;
                margin-top:14px'>Finds the zone.<br>You place the trade.</div>
           <div style='color:{MUTED};font-size:13px;line-height:1.6;margin-top:12px;max-width:38ch'>
-            Scans gold, FX, indices, crypto and oil for reversals at support and resistance,
-            marks the fair value gaps and order blocks, and hands you the exact order to
-            place on MT5.</div>
+            Reads every timeframe from five minutes to weekly, marks the support, fair value
+            gaps and order blocks, and hands you the exact order to place on MT5.</div>
         </div>""", unsafe_allow_html=True)
 
         tab_in, tab_up = st.tabs(["Sign in", "Create account"])
@@ -434,17 +549,18 @@ def face_login():
                 else:
                     st.error("Name, email and a password of 6+ characters.")
 
-        st.markdown(f"<div class='zl-muted' style='margin-top:12px'>No broker login needed — "
-                    f"Zonelock never touches your account.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='zl-muted' style='margin-top:12px'>No broker login needed — "
+                    "Zonelock never touches your account.</div>", unsafe_allow_html=True)
 
 
-# ── the scanner ──────────────────────────────────────────────────────
+# ── scanner ──────────────────────────────────────────────────────────
 
 def face_app():
     r: Rules = st.session_state["rules"]
     now = datetime.now(timezone.utc)
     events, cal_err = economic_calendar()
     upcoming = next_high_impact(events, now)
+    tf_keys = list(TIMEFRAMES.keys())
 
     with st.sidebar:
         st.markdown(f"<div style='letter-spacing:.24em;font-size:11px;color:{ACCENT};"
@@ -452,100 +568,126 @@ def face_app():
                     f"<div class='zl-muted'>{st.session_state['email']}</div>",
                     unsafe_allow_html=True)
         st.divider()
-        st.session_state["watch"] = st.multiselect(
-            "Watchlist", list(SYMBOLS.keys()), st.session_state["watch"])
+        st.session_state["watch"] = st.multiselect("Watchlist", list(SYMBOLS.keys()),
+                                                   st.session_state["watch"])
+        st.session_state["ladder"] = st.multiselect(
+            "Timeframes to read", tf_keys, st.session_state["ladder"],
+            help="Every one of these is analysed; slower frames weigh more in the bias.")
         st.session_state["account_size"] = st.number_input(
-            "Account size ($)", 50.0, 1_000_000.0, st.session_state["account_size"], 50.0,
-            help="Used to size the lots the setup card suggests.")
+            "Account size ($)", 50.0, 1_000_000.0, st.session_state["account_size"], 50.0)
         st.divider()
-        st.markdown("<div class='zl-muted'>Free market data · Yahoo Finance. "
-                    "No broker connection.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='zl-muted'>Free data · Yahoo Finance, cached on disk and "
+                    "rate-limit aware. No broker connection.</div>", unsafe_allow_html=True)
         if st.button("Sign out", use_container_width=True):
             st.session_state["stage"] = "login"
             st.rerun()
 
+    if not st.session_state["ladder"]:
+        st.session_state["ladder"] = ["M15", "H1", "H4", "D1"]
+
     sessions = [("Tokyo", 0, 9), ("London", 7, 16), ("New York", 12, 21)]
     live_now = [n for n, a, b in sessions if a <= now.hour < b]
-    pill_html = "".join(
-        f"<span class='zl-chip' style='background:{A800 if n in live_now else RAISED};"
-        f"color:{A300 if n in live_now else FAINT}'>{n}</span>" for n, _, _ in sessions)
+    pill = "".join(f"<span class='zl-chip' style='background:{A800 if n in live_now else RAISED};"
+                   f"color:{A300 if n in live_now else FAINT}'>{n}</span>"
+                   for n, _, _ in sessions)
     scanned = st.session_state["scanned_at"]
     age = f"{int((now - scanned).total_seconds() // 60)}m ago" if scanned else "not yet"
 
     st.markdown(f"""
     <div class='zl-strip'>
-      <div><div style='font-size:19px;font-weight:600'>Setup scanner</div>
-        <div class='zl-muted' style='margin-top:1px'>{len(st.session_state['watch'])} symbols ·
-        M15 · last scan {age}</div></div>
-      <div style='margin-left:auto;display:flex;align-items:center;gap:7px;flex-wrap:wrap'>
-        {pill_html}<span class='zl-chip'>{now:%H:%M} UTC</span></div>
+      <div><div style='font-size:19px;font-weight:600;letter-spacing:-.01em'>Setup scanner</div>
+        <div class='zl-muted' style='margin-top:2px'>{len(st.session_state['watch'])} symbols ·
+        {' · '.join(st.session_state['ladder'])} · last scan {age}</div></div>
+      <div style='margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap'>
+        {pill}<span class='zl-chip'>{now:%H:%M} UTC</span></div>
     </div>""", unsafe_allow_html=True)
 
-    tabs = st.tabs(["Scanner", "Setup", "Chart", "Daily zones", "Picks", "News", "Rules", "Alerts"])
+    tabs = st.tabs(["Scanner", "Setup", "Chart", "Timeframes", "Daily zones",
+                    "Picks", "News", "Rules", "Alerts"])
     scan = st.session_state["scan"]
+
+    def tf_picker(key: str):
+        chosen = st.radio("Timeframe", tf_keys, index=tf_keys.index(st.session_state["tf"]),
+                          horizontal=True, key=key, label_visibility="collapsed")
+        if chosen != st.session_state["tf"]:
+            st.session_state["tf"] = chosen
+            st.rerun()
 
     # ── Scanner ──
     def _scanner():
-        c1, c2 = st.columns([1, 3])
-        if c1.button("Scan now", use_container_width=True):
-            run_scan(r)
-            st.rerun()
+        c1, c2 = st.columns([1, 2.2])
+        with c1:
+            if st.button("Scan now", use_container_width=True):
+                run_scan(r)
+                st.rerun()
+        with c2:
+            tf_picker("tf_scan")
 
         if upcoming:
             mins = int((upcoming["time"] - now).total_seconds() // 60)
             if mins <= r.news_block_minutes:
                 note(f"<b>{upcoming['currency']} {upcoming['title']}</b> in {mins} min — "
-                     f"setups on {upcoming['currency']} pairs are marked as news-blocked.", "warn")
+                     f"setups on {upcoming['currency']} pairs are news-blocked.", "warn")
             else:
                 h, m = divmod(mins, 60)
                 note(f"Next high-impact event · <b>{upcoming['currency']} "
                      f"{upcoming['title']}</b> in {h}h {m:02d}m.", "muted")
 
         if not scan:
-            note("Press <b>Scan now</b> to analyse your watchlist. Each symbol is checked "
-                 "against every rule and graded A, B or C.", "accent")
+            note("Press <b>Scan now</b>. Each symbol is read on every timeframe you "
+                 "selected, then graded A, B or C — the grade rises when the timeframes "
+                 "agree and falls when the setup fights them.", "accent")
             return
 
         rows = scan["rows"]
         found = [x for x in rows if x["decision"].taken]
+        agree = [x for x in found if x["view"].agrees_with(x["decision"].direction)]
         a_grade = [x for x in found if x["grade"] == "A"]
         st.markdown(f"""
         <div class='zl-stats'>
           <div class='zl-stat'><div class='k'>Scanned</div><div class='v mono'>{len(rows)}</div>
-            <div class='s'>symbols on M15</div></div>
-          <div class='zl-stat'><div class='k'>Setups found</div>
+            <div class='s'>× {len(st.session_state['ladder'])} timeframes</div></div>
+          <div class='zl-stat'><div class='k'>Setups</div>
             <div class='v mono' style='color:{UP if found else MUTED}'>{len(found)}</div>
             <div class='s'>{len(rows)-len(found)} passed the rules</div></div>
+          <div class='zl-stat'><div class='k'>Stack agrees</div>
+            <div class='v mono' style='color:{UP if agree else MUTED}'>{len(agree)}</div>
+            <div class='s'>with the trade direction</div></div>
           <div class='zl-stat'><div class='k'>A-grade</div>
             <div class='v mono' style='color:{UP if a_grade else MUTED}'>{len(a_grade)}</div>
             <div class='s'>best confluence</div></div>
-          <div class='zl-stat'><div class='k'>Data</div><div class='v mono'>Free</div>
-            <div class='s'>Yahoo Finance</div></div>
         </div>""", unsafe_allow_html=True)
 
         if scan["failed"]:
             with st.expander(f"{len(scan['failed'])} symbols could not be fetched"):
+                note("Yahoo rate-limits bursts. Cached data is reused where possible — "
+                     "wait a minute and scan again, or add a free Twelve Data key on "
+                     "the Alerts tab as a fallback.", "muted")
                 for f in scan["failed"]:
                     st.markdown(f"<div class='zl-muted'>{f}</div>", unsafe_allow_html=True)
 
         st.markdown("##### Setups")
         if not found:
             note("Nothing qualifies right now. That is the system working — it only calls "
-                 "a setup when price is at a zone <i>and</i> a candle has confirmed it.", "muted")
+                 "a setup when price is at a zone <i>and</i> a candle has confirmed it.",
+                 "muted")
 
         for row in found:
             d, sym = row["decision"], row["symbol"]
-            dig = SYMBOLS[sym]["digits"]
-            g, gc = row["grade"], GRADE_COLOR[row["grade"]]
+            dig, g, gc = SYMBOLS[sym]["digits"], row["grade"], GRADE[row["grade"]]
             side = UP if d.direction == "BUY" else DOWN
-            conf = (" · ".join(row["confluence"])) if row["confluence"] else "none"
+            v = row["view"]
+            aligned = v.agrees_with(d.direction)
+            al_col = UP if aligned else (WARN if v.alignment == "mixed" else DOWN)
+            conf = " · ".join(row["confluence"]) if row["confluence"] else "none"
             tags = "".join(f"<span class='zl-chip'>{t}</span>" for t in d.tags)
             card(f"""
               <div style='display:flex;align-items:center;gap:11px'>
                 <span class='zl-grade' style='background:{gc}22;color:{gc}'>{g}</span>
                 <div style='flex:1'>
                   <div style='font-size:15.5px;font-weight:500'>{SYMBOLS[sym]['mt5']}
-                    <span style='color:{side};font-size:12.5px;margin-left:6px'>{d.direction}</span></div>
+                    <span style='color:{side};font-size:12.5px;margin-left:6px'>{d.direction}</span>
+                    <span class='zl-muted' style='font-size:11.5px;margin-left:6px'>{row['tf']}</span></div>
                   <div class='zl-muted' style='margin-top:2px'>{SYMBOLS[sym]['name']} ·
                     {SYMBOLS[sym]['class']}</div>
                 </div>
@@ -555,7 +697,9 @@ def face_app():
                 </div>
               </div>
               <div style='font-size:13px;margin-top:9px;line-height:1.45'>{d.headline}</div>
-              <div style='margin-top:8px'>{tags}</div>
+              <div style='margin-top:8px'>{tags}
+                <span class='zl-chip' style='background:{al_col}22;color:{al_col}'>
+                  stack {v.alignment} {int(v.agreement*100)}%</span></div>
               <div class='zl-lv'>
                 <div><div class='k'>Entry</div><div class='v mono'>{d.entry:,.{dig}f}</div></div>
                 <div><div class='k'>Stop</div><div class='v mono' style='color:{DOWN}'>{d.stop_loss:,.{dig}f}</div></div>
@@ -566,43 +710,41 @@ def face_app():
             if b1.button("Open setup", key=f"o{sym}", use_container_width=True):
                 st.session_state["symbol"] = sym
                 st.rerun()
-            if b2.button("Log this pick", key=f"l{sym}", use_container_width=True):
+            if b2.button("Log pick", key=f"l{sym}", use_container_width=True):
                 log_pick(row)
                 st.success(f"{sym} logged.")
-            if b3.button("Send to Telegram", key=f"t{sym}", use_container_width=True):
-                ok, msg = telegram(
-                    f"<b>{g}-grade · {SYMBOLS[sym]['mt5']} {d.direction}</b>\n"
-                    f"Entry <code>{d.entry:,.{dig}f}</code>\n"
-                    f"SL <code>{d.stop_loss:,.{dig}f}</code>\n"
-                    f"TP <code>{d.take_profit:,.{dig}f}</code>\n"
-                    f"{d.lots:.2f} lots · {d.rr}R\n\n{d.headline}")
+            if b3.button("Telegram", key=f"t{sym}", use_container_width=True):
+                ok, msg = telegram(ticket_text(row))
                 st.success(msg) if ok else st.warning(msg)
 
         with st.expander(f"Why {len(rows)-len(found)} symbols were passed"):
             for row in [x for x in rows if not x["decision"].taken]:
-                d = row["decision"]
+                d, v = row["decision"], row["view"]
                 st.markdown(f"<div class='zl-row'><span class='zl-chip'>{row['symbol']}</span>"
                             f"<span style='flex:1;font-size:12.5px'>{d.headline}</span>"
+                            f"<span class='zl-muted' style='font-size:11px'>{v.alignment}</span>"
                             f"<span style='color:{DOWN};font-size:11px'>{d.verdict}</span></div>",
                             unsafe_allow_html=True)
 
-    # ── Setup ticket ──
+    # ── Setup ──
     def _setup():
-        sym = st.session_state["symbol"]
-        sym = st.selectbox("Symbol", list(SYMBOLS.keys()),
-                           index=list(SYMBOLS.keys()).index(sym))
-        st.session_state["symbol"] = sym
-        row = next((x for x in (scan["rows"] if scan else []) if x["symbol"] == sym), None)
-        if row is None:
-            with st.spinner(f"Analysing {sym}…"):
-                row = analyse(sym, r, st.session_state["td_key"])
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            sym = st.selectbox("Symbol", list(SYMBOLS.keys()),
+                               index=list(SYMBOLS.keys()).index(st.session_state["symbol"]))
+            st.session_state["symbol"] = sym
+        with c2:
+            tf_picker("tf_setup")
 
+        row = cached_row(sym, r)
         d, meta, dig = row["decision"], SYMBOLS[sym], SYMBOLS[sym]["digits"]
+
         if not d.taken:
-            card(f"<div class='zl-kicker'>{meta['mt5']} · no setup</div>"
+            card(f"<div class='zl-kicker'>{meta['mt5']} · {row['tf']} · no setup</div>"
                  f"<div style='font-size:15px;margin-top:6px;line-height:1.4'>{d.headline}</div>"
                  f"<div class='zl-muted' style='margin-top:6px'>Stopped by "
                  f"<span style='color:{DOWN}'>{d.verdict}</span></div>")
+            mtf_panel(row)
             checks = "".join(
                 f"<div class='zl-row'><span style='color:{UP if c.passed else DOWN};width:14px'>"
                 f"{'✓' if c.passed else '✕'}</span><span style='flex:1;font-size:12.5px'>{c.label}</span>"
@@ -611,9 +753,9 @@ def face_app():
             card(f"<div class='zl-kicker' style='margin-bottom:4px'>Rule checks</div>{checks}")
             return
 
-        risk_pips = pips(sym, abs(d.entry - d.stop_loss))
-        rew_pips = pips(sym, abs(d.take_profit - d.entry))
-        g, gc = row["grade"], GRADE_COLOR[row["grade"]]
+        risk_p = pips(sym, abs(d.entry - d.stop_loss))
+        rew_p = pips(sym, abs(d.take_profit - d.entry))
+        g, gc, v = row["grade"], GRADE[row["grade"]], row["view"]
 
         st.markdown(f"""
         <div class='zl-card' style='border-color:{gc}44'>
@@ -623,11 +765,14 @@ def face_app():
             <div style='flex:1'>
               <div style='font-size:20px;font-weight:500'>{meta['mt5']} ·
                 <span style='color:{UP if d.direction=="BUY" else DOWN}'>{d.direction}</span></div>
-              <div class='zl-muted'>{meta['name']} · M15 · {d.rr}R</div>
+              <div class='zl-muted'>{meta['name']} · {row['tf']} · {d.rr}R ·
+                stack {v.alignment}</div>
             </div>
           </div>
           <div style='font-size:13.5px;margin-top:11px;line-height:1.5'>{d.headline}</div>
         </div>""", unsafe_allow_html=True)
+
+        mtf_panel(row)
 
         st.markdown("##### Place this on MT5")
         st.markdown(f"""
@@ -637,9 +782,9 @@ def face_app():
             Market {d.direction}</b><br>
           Volume &nbsp;&nbsp;&nbsp; <b>{d.lots:.2f}</b> lots<br>
           Stop loss &nbsp;<b style='color:{DOWN}'>{d.stop_loss:,.{dig}f}</b>
-            <span style='color:{MUTED}'>&nbsp; ({risk_pips:g} pips)</span><br>
+            <span style='color:{MUTED}'>&nbsp; ({risk_p:g} pips)</span><br>
           Take profit <b style='color:{UP}'>{d.take_profit:,.{dig}f}</b>
-            <span style='color:{MUTED}'>&nbsp; ({rew_pips:g} pips)</span>
+            <span style='color:{MUTED}'>&nbsp; ({rew_p:g} pips)</span>
         </div>""", unsafe_allow_html=True)
 
         st.code(f"{meta['mt5']}  {d.direction}  {d.lots:.2f}  "
@@ -652,10 +797,7 @@ def face_app():
             log_pick(row)
             st.success("Logged.")
         if c2.button("Send to Telegram", use_container_width=True, key="setup_tg"):
-            ok, msg = telegram(
-                f"<b>{g}-grade · {meta['mt5']} {d.direction}</b>\n"
-                f"Entry <code>{d.entry:,.{dig}f}</code>\nSL <code>{d.stop_loss:,.{dig}f}</code>\n"
-                f"TP <code>{d.take_profit:,.{dig}f}</code>\n{d.lots:.2f} lots · {d.rr}R")
+            ok, msg = telegram(ticket_text(row))
             st.success(msg) if ok else st.warning(msg)
 
         checks = "".join(
@@ -668,16 +810,25 @@ def face_app():
     # ── Chart ──
     def _chart():
         sym = st.session_state["symbol"]
-        c1, c2, c3 = st.columns([2, 1, 1])
-        c1.markdown(f"##### {SYMBOLS[sym]['mt5']} · M15")
-        span = c2.radio("Bars", [60, 120, 200], index=1, horizontal=True,
-                        label_visibility="collapsed")
-        show_daily = c3.toggle("Daily levels", True)
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            sym = st.selectbox("Symbol", list(SYMBOLS.keys()),
+                               index=list(SYMBOLS.keys()).index(sym), key="chart_sym")
+            st.session_state["symbol"] = sym
+        with c2:
+            tf_picker("tf_chart")
 
-        row = next((x for x in (scan["rows"] if scan else []) if x["symbol"] == sym), None)
-        if row is None:
-            with st.spinner("Loading…"):
-                row = analyse(sym, r, st.session_state["td_key"])
+        c3, c4 = st.columns([2, 1])
+        span = c3.radio("Bars", [60, 120, 200, 300], index=1, horizontal=True,
+                        label_visibility="collapsed")
+        show_daily = c4.toggle("Daily levels", True)
+
+        row = cached_row(sym, r)
+        age = cache_age(sym, row["tf"])
+        st.markdown(f"<div class='zl-muted' style='margin:2px 0 6px'>"
+                    f"{SYMBOLS[sym]['mt5']} · {TIMEFRAMES[row['tf']]['label']}"
+                    + (f" · data {age//60}m old" if age else "") + "</div>",
+                    unsafe_allow_html=True)
         st.plotly_chart(chart(row, r, span, show_daily), use_container_width=True,
                         config={"displayModeBar": False, "scrollZoom": True})
         legend = "".join(f"<span class='zl-chip'><span style='color:{c}'>■</span> {t}</span>"
@@ -686,33 +837,65 @@ def face_app():
                                       (FAINT, "Daily levels")])
         st.markdown(f"<div style='margin-top:6px'>{legend}</div>", unsafe_allow_html=True)
 
+    # ── Timeframes ──
+    def _timeframes():
+        sym = st.selectbox("Symbol", list(SYMBOLS.keys()),
+                           index=list(SYMBOLS.keys()).index(st.session_state["symbol"]),
+                           key="mtf_sym")
+        st.session_state["symbol"] = sym
+        row = cached_row(sym, r)
+        mtf_panel(row)
+
+        st.markdown("##### Every timeframe in detail")
+        dig = SYMBOLS[sym]["digits"]
+        for tf in ["M5", "M15", "M30", "H1", "H4", "D1", "W1"]:
+            rd = row["view"].reads.get(tf)
+            if not rd:
+                continue
+            c = {"bullish": UP, "bearish": DOWN}.get(rd.bias, WARN)
+            sup = f"{rd.nearest_support:,.{dig}f}" if rd.nearest_support else "—"
+            res = f"{rd.nearest_resistance:,.{dig}f}" if rd.nearest_resistance else "—"
+            card(f"<div style='display:flex;align-items:center;gap:10px'>"
+                 f"<span class='zl-chip' style='background:{c}22;color:{c}'>{tf}</span>"
+                 f"<span style='flex:1;font-size:13.5px'>{TIMEFRAMES[tf]['label']} · "
+                 f"<b style='color:{c}'>{rd.bias}</b></span>"
+                 f"<span class='zl-muted' style='font-size:11px'>{rd.structure}</span></div>"
+                 f"<div class='zl-lv'>"
+                 f"<div><div class='k'>At</div><div class='v' style='font-size:12.5px'>{rd.at_zone}</div></div>"
+                 f"<div><div class='k'>Support</div><div class='v mono' style='font-size:12.5px'>{sup}</div></div>"
+                 f"<div><div class='k'>Resistance</div><div class='v mono' style='font-size:12.5px'>{res}</div></div>"
+                 f"<div><div class='k'>Signals</div><div class='v' style='font-size:12px'>"
+                 f"{rd.reversal or '—'}{' · ' + str(rd.unfilled_fvgs) + ' FVG' if rd.unfilled_fvgs else ''}"
+                 f"{' · ' + rd.order_block if rd.order_block else ''}</div></div></div>")
+
+        if row["missing"]:
+            with st.expander(f"{len(row['missing'])} timeframes unavailable"):
+                for m in row["missing"]:
+                    st.markdown(f"<div class='zl-muted'>{m}</div>", unsafe_allow_html=True)
+
     # ── Daily zones ──
     def _daily():
         sym = st.session_state["symbol"]
-        row = next((x for x in (scan["rows"] if scan else []) if x["symbol"] == sym), None)
-        if row is None:
-            with st.spinner("Loading daily candles…"):
-                row = analyse(sym, r, st.session_state["td_key"])
+        row = cached_row(sym, r)
         dig, price = SYMBOLS[sym]["digits"], row["price"]
         st.markdown(f"##### {SYMBOLS[sym]['mt5']} · daily map")
-        st.markdown(f"<div class='zl-muted' style='margin-bottom:10px'>Levels drawn from "
-                    f"daily candles — the map to mark on your chart before anything else. "
-                    f"Price now <b class='mono'>{price:,.{dig}f}</b>.</div>",
-                    unsafe_allow_html=True)
+        st.markdown(f"<div class='zl-muted' style='margin-bottom:10px'>Levels from daily "
+                    f"candles — the map to mark before anything else. Price now "
+                    f"<b class='mono'>{price:,.{dig}f}</b>.</div>", unsafe_allow_html=True)
         if not row["levels"]:
             note("Daily candles unavailable for this symbol right now.", "warn")
             return
         for lv in row["levels"]:
             col = {"resistance": DOWN, "support": UP}.get(lv.kind, FAINT)
             dist = pips(sym, lv.distance(price))
-            above = "above" if lv.price > price else "below"
+            side = "above" if lv.price > price else "below"
             st.markdown(f"<div class='zl-row'>"
                         f"<span class='zl-chip' style='background:{col}22;color:{col}'>"
                         f"{lv.kind[:3].upper()}</span>"
                         f"<span style='flex:1;font-size:13px'>{lv.name}</span>"
                         f"<span class='mono' style='font-size:13px'>{lv.price:,.{dig}f}</span>"
-                        f"<span class='zl-muted mono' style='font-size:11px;width:96px;"
-                        f"text-align:right'>{dist:g} pips {above}</span></div>",
+                        f"<span class='zl-muted mono' style='font-size:11px;width:100px;"
+                        f"text-align:right'>{dist:g} pips {side}</span></div>",
                         unsafe_allow_html=True)
 
     # ── Picks ──
@@ -723,20 +906,24 @@ def face_app():
                  "appears here with its reasoning.", "muted")
             return
         st.dataframe(pd.DataFrame([{
-            "When": x["at"][5:16].replace("T", " "), "Symbol": x["mt5"], "Grade": x["grade"],
-            "Side": x["direction"], "Entry": x["entry"], "SL": x["sl"], "TP": x["tp"],
-            "R:R": x["rr"], "Lots": x["lots"]} for x in rows]),
-            use_container_width=True, hide_index=True)
+            "When": x["at"][5:16].replace("T", " "), "Symbol": x["mt5"],
+            "TF": x.get("tf", ""), "Grade": x["grade"], "Side": x["direction"],
+            "Entry": x["entry"], "SL": x["sl"], "TP": x["tp"], "R:R": x["rr"],
+            "Lots": x["lots"]} for x in rows]), use_container_width=True, hide_index=True)
         st.markdown("##### Reasoning")
         for x in rows[:25]:
             with st.expander(f"{x['mt5']} {x['direction']} · {x['grade']} · {x['at'][5:16]}"):
                 st.write(x["headline"])
                 st.markdown("".join(f"<span class='zl-chip'>{t}</span>" for t in x["tags"]),
                             unsafe_allow_html=True)
-                if x["confluence"]:
-                    st.markdown(f"<div class='zl-muted' style='margin-top:6px'>Daily "
-                                f"confluence: {', '.join(x['confluence'])}</div>",
-                                unsafe_allow_html=True)
+                extra = []
+                if x.get("confluence"):
+                    extra.append("Daily confluence: " + ", ".join(x["confluence"]))
+                if x.get("alignment"):
+                    extra.append(f"Timeframe stack: {x['alignment']}")
+                if extra:
+                    st.markdown(f"<div class='zl-muted' style='margin-top:6px'>"
+                                f"{' · '.join(extra)}</div>", unsafe_allow_html=True)
 
     # ── News ──
     def _news():
@@ -771,7 +958,8 @@ def face_app():
             for h in items:
                 card(f"<div style='font-size:13.5px;line-height:1.45'>"
                      f"<a href='{h['link']}' target='_blank'>{h['title']}</a></div>"
-                     f"<div class='zl-muted' style='margin-top:4px'>{h['source']} · {h['when']}</div>")
+                     f"<div class='zl-muted' style='margin-top:4px'>{h['source']} · "
+                     f"{h['when']}</div>")
 
     # ── Rules ──
     def _rules():
@@ -797,11 +985,10 @@ def face_app():
     # ── Alerts ──
     def _alerts():
         st.markdown("##### Telegram alerts")
-        note("Streamlit cannot send phone notifications on its own. Telegram can, it is "
-             "free, and it takes two minutes.<br>"
-             "1 · Message <b>@BotFather</b> on Telegram, send <code>/newbot</code>, copy the token.<br>"
-             "2 · Message your new bot once so it may reply.<br>"
-             "3 · Message <b>@userinfobot</b> to get your chat id.", "accent")
+        note("Streamlit cannot push phone notifications. Telegram can, free, in two minutes."
+             "<br>1 · Message <b>@BotFather</b>, send <code>/newbot</code>, copy the token."
+             "<br>2 · Message your new bot once so it may reply."
+             "<br>3 · Message <b>@userinfobot</b> for your chat id.", "accent")
         st.session_state["tg_token"] = st.text_input("Bot token", st.session_state["tg_token"],
                                                      type="password")
         st.session_state["tg_chat"] = st.text_input("Chat id", st.session_state["tg_chat"])
@@ -810,21 +997,24 @@ def face_app():
             st.success(msg) if ok else st.warning(msg)
 
         st.markdown("##### Data fallback")
+        note("Yahoo Finance is free but rate-limits bursts — that is the <b>429</b> you saw. "
+             "The app now spaces its requests, backs off and caches to disk, so a repeat "
+             "scan costs nothing. A free Twelve Data key removes the ceiling entirely.",
+             "muted")
         st.session_state["td_key"] = st.text_input(
             "Twelve Data API key (optional)", st.session_state["td_key"], type="password",
-            help="Free key at twelvedata.com. Used only if Yahoo Finance fails.")
+            help="Free at twelvedata.com — 800 calls a day.")
 
-        st.markdown("##### Automatic scanning")
-        st.markdown(f"<div class='zl-muted'>This page scans when you press the button. "
-                    f"For alerts that arrive while the app is closed, run "
-                    f"<code>scanner.py</code> on any free scheduler — GitHub Actions, "
-                    f"PythonAnywhere, Railway — every 15 minutes. It uses these same "
-                    f"rules and pushes to the same Telegram chat.</div>",
+        st.markdown("##### Scanning while the app is closed")
+        st.markdown("<div class='zl-muted'>Run <code>scanner.py</code> on any free "
+                    "scheduler — GitHub Actions, PythonAnywhere, Railway — every 15 "
+                    "minutes. Same rules, same Telegram chat, nothing open.</div>",
                     unsafe_allow_html=True)
 
-    for tab, fn, label in zip(tabs, [_scanner, _setup, _chart, _daily, _picks, _news, _rules, _alerts],
-                              ["Scanner", "Setup", "Chart", "Daily zones", "Picks", "News",
-                               "Rules", "Alerts"]):
+    fns = [_scanner, _setup, _chart, _timeframes, _daily, _picks, _news, _rules, _alerts]
+    labels = ["Scanner", "Setup", "Chart", "Timeframes", "Daily zones", "Picks",
+              "News", "Rules", "Alerts"]
+    for tab, fn, label in zip(tabs, fns, labels):
         with tab:
             safe(fn, label)
 

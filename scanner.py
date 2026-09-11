@@ -17,13 +17,16 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-from market import SYMBOLS, fetch, pips
-from strategy import Rules, atr, confluence, daily_zones, evaluate, grade
+from market import MTF_LADDER, SYMBOLS, fetch, pips
+from strategy import (Rules, atr, confluence, daily_zones, evaluate,
+                      mtf_grade, multi_timeframe)
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 CHAT = os.environ.get("TELEGRAM_CHAT", "")
 ACCOUNT = float(os.environ.get("ZONELOCK_ACCOUNT", "1000"))
 MIN_GRADE = os.environ.get("ZONELOCK_MIN_GRADE", "B").upper()
+BASE_TF = os.environ.get("ZONELOCK_TF", "M15").upper()
+REQUIRE_ALIGNMENT = os.environ.get("ZONELOCK_ALIGNED", "1") == "1"
 PICKS = os.environ.get("ZONELOCK_PICKS", "picks.jsonl")
 SEEN = os.environ.get("ZONELOCK_SEEN", "seen.json")
 
@@ -64,17 +67,19 @@ def main() -> None:
     sent = 0
 
     for symbol in SYMBOLS:
-        try:
-            m15 = fetch(symbol, "15m", 400)
+        frames = {}
+        for tf in MTF_LADDER:
             try:
-                d1 = fetch(symbol, "1d", 120)
-            except Exception:
-                d1 = None
-        except Exception as exc:
-            print(f"· {symbol}: {exc}")
+                frames[tf] = fetch(symbol, tf, 400)
+            except Exception as exc:
+                print(f"· {symbol} {tf}: {exc}")
+        if BASE_TF not in frames:
             continue
 
+        m15 = frames[BASE_TF]
+        d1 = frames.get("D1")
         price = float(m15["close"].iloc[-1])
+        view = multi_timeframe(frames, rules)
         dec = evaluate(symbol, m15, balance=ACCOUNT, tick_value=1.0,
                        tick_size=SYMBOLS[symbol]["pip"], rules=rules)
 
@@ -84,7 +89,11 @@ def main() -> None:
 
         levels = daily_zones(d1, price) if d1 is not None else []
         conf = confluence(dec, levels, atr(m15, 14))
-        g = grade(dec, conf)
+        g = mtf_grade(dec, view, conf)
+
+        if REQUIRE_ALIGNMENT and not view.agrees_with(dec.direction):
+            print(f"· {symbol}: stack {view.alignment}, not aligned with {dec.direction}")
+            continue
         if RANK[g] > RANK.get(MIN_GRADE, 1):
             print(f"· {symbol}: {g}-grade, below {MIN_GRADE}")
             continue
@@ -103,8 +112,9 @@ def main() -> None:
                 f"SL <code>{dec.stop_loss:,.{dig}f}</code> ({risk:g} pips)\n"
                 f"TP <code>{dec.take_profit:,.{dig}f}</code>\n"
                 f"{dec.lots:.2f} lots · {dec.rr}R\n\n{dec.headline}")
+        body += f"\n\nTimeframes: {view.summary}"
         if conf:
-            body += f"\n\nDaily confluence: {', '.join(conf)}"
+            body += f"\nDaily confluence: {', '.join(conf)}"
 
         if send(body):
             sent += 1
@@ -114,6 +124,7 @@ def main() -> None:
                 "direction": dec.direction, "entry": dec.entry, "sl": dec.stop_loss,
                 "tp": dec.take_profit, "rr": dec.rr, "lots": dec.lots,
                 "headline": dec.headline, "tags": dec.tags, "confluence": conf,
+                "tf": BASE_TF, "alignment": view.alignment,
                 "outcome": "pending"}) + "\n")
         print(f"✓ {symbol}: {g}-grade {dec.direction} alert sent")
 
