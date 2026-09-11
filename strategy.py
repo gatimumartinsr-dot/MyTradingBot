@@ -732,3 +732,172 @@ def mtf_grade(decision: "Decision", view: MTFView, confluences: List[str]) -> st
     elif view.alignment != "mixed":
         score -= 2                      # trading against the stack
     return "A" if score >= 6 else "B" if score >= 4 else "C"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Reversal watch — price is AT the zone but has not confirmed yet
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class Watch:
+    """A setup forming. Not tradeable yet — this is the prompt to watch it."""
+    symbol: str
+    direction: str
+    zone_kind: str
+    zone_low: float
+    zone_high: float
+    price: float
+    distance: float          # price units to the zone mid
+    state: str               # "in zone" | "approaching"
+    waiting_for: str         # the plain-English thing that must happen
+    forming: Optional[str]   # a pattern half-built on the live candle
+    minutes_left: int        # until the current candle closes
+    structure: str
+
+    @property
+    def urgency(self) -> str:
+        if self.state == "in zone" and self.forming:
+            return "imminent"
+        if self.state == "in zone":
+            return "watching"
+        return "approaching"
+
+
+def _forming_pattern(df: pd.DataFrame, direction: str) -> Optional[str]:
+    """What the CURRENT (unclosed) candle would be if it closed now."""
+    if len(df) < 2:
+        return None
+    prev, cur = df.iloc[-2], df.iloc[-1]
+    rng = cur["high"] - cur["low"]
+    if rng <= 0:
+        return None
+    body = abs(cur["close"] - cur["open"])
+    bull = cur["close"] > cur["open"]
+
+    if direction == "BUY":
+        lower = min(cur["open"], cur["close"]) - cur["low"]
+        if lower > rng * 0.5 and body < rng * 0.4:
+            return "long lower wick — a pin bar if it closes here"
+        if bull and cur["close"] >= prev["open"] and prev["close"] < prev["open"]:
+            return "engulfing the last red candle"
+        if bull and body > rng * 0.55:
+            return "strong green body"
+    else:
+        upper = cur["high"] - max(cur["open"], cur["close"])
+        if upper > rng * 0.5 and body < rng * 0.4:
+            return "long upper wick — a shooting star if it closes here"
+        if not bull and cur["close"] <= prev["open"] and prev["close"] > prev["open"]:
+            return "engulfing the last green candle"
+        if not bull and body > rng * 0.55:
+            return "strong red body"
+    return None
+
+
+def reversal_watch(symbol: str, df: pd.DataFrame, timeframe_minutes: int = 15,
+                   rules: Optional[Rules] = None,
+                   approach_atr: float = 1.2) -> Optional[Watch]:
+    """
+    Called on every symbol that did NOT produce a signal. Returns a Watch when
+    price is sitting in — or closing on — a zone, so the app can say
+    'watch this one' instead of silently passing it.
+    """
+    rules = rules or Rules()
+    if len(df) < 60:
+        return None
+
+    price = float(df["close"].iloc[-1])
+    a = atr(df, 14)
+    if not a or a != a:
+        return None
+
+    zones = build_zones(df, rules)
+    sup = nearest_zone(zones, price, "support")
+    res = nearest_zone(zones, price, "resistance")
+
+    candidates = []
+    if sup:
+        candidates.append(("BUY", sup, abs(price - sup.mid)))
+    if res:
+        candidates.append(("SELL", res, abs(price - res.mid)))
+    if not candidates:
+        return None
+
+    direction, zone, dist = min(candidates, key=lambda c: c[2])
+    inside = zone.contains(price, rules.zone_touch_tolerance)
+    if not inside and dist > a * approach_atr:
+        return None
+
+    st = market_structure(df, rules)
+    confirmed = reversal_candle(df, direction, rules)
+    if confirmed:
+        return None                      # this one is a signal, not a watch
+
+    forming = _forming_pattern(df, direction)
+
+    last = df["time"].iloc[-1]
+    try:
+        elapsed = (pd.Timestamp.now(tz="UTC") - last).total_seconds() / 60
+        left = max(0, int(timeframe_minutes - (elapsed % timeframe_minutes)))
+    except Exception:
+        left = timeframe_minutes
+
+    if inside:
+        want = ("a green candle to close inside the zone"
+                if direction == "BUY" else
+                "a red candle to close inside the zone")
+        state = "in zone"
+    else:
+        want = (f"price to reach {zone.low:.5f}–{zone.high:.5f}")
+        state = "approaching"
+
+    return Watch(symbol=symbol, direction=direction, zone_kind=zone.kind,
+                 zone_low=zone.low, zone_high=zone.high, price=price,
+                 distance=dist, state=state, waiting_for=want, forming=forming,
+                 minutes_left=left, structure=st.event)
+
+
+def explain(decision: "Decision", view: "MTFView",
+            confluences: List[str], symbol: str) -> List[str]:
+    """The reasons a trade was picked, in the order a trader would say them."""
+    if not decision.taken:
+        return []
+    why: List[str] = []
+
+    zone = next((c for c in decision.checks if "inside" in c.label.lower()), None)
+    if zone:
+        why.append(f"Price is inside {zone.label.split('inside ')[-1]} at {zone.value}.")
+
+    rev = next((c for c in decision.checks
+                if "reversal" in c.label.lower() and c.passed), None)
+    if rev:
+        why.append(f"A {rev.value} closed there — the turn is confirmed, not guessed.")
+
+    ob = next((c for c in decision.checks if c.label == "Order block"), None)
+    if ob:
+        event = "a break of structure" if "BOS" in ob.value else "a change of character"
+        why.append(f"That level is an order block created by {event} ({ob.value}).")
+
+    fvg = next((c for c in decision.checks if "FVG" in c.label and c.passed), None)
+    if fvg:
+        why.append(f"There is an unfilled fair value gap in the same direction "
+                   f"({fvg.value}) — unfinished business price tends to revisit.")
+
+    if view and view.agrees_with(decision.direction):
+        why.append(f"The timeframe stack agrees: {view.summary}")
+    elif view and view.alignment != "mixed":
+        why.append(f"Note — the stack reads {view.alignment}, against this trade. "
+                   f"Size down or skip.")
+
+    if confluences:
+        why.append(f"Daily levels sit right on the entry: {', '.join(confluences)}.")
+
+    if decision.rr:
+        why.append(f"The next opposing zone is {decision.rr}R away, so the reward "
+                   f"justifies the stop.")
+
+    lots = next((c for c in decision.checks if c.label == "Lot size"), None)
+    if lots:
+        why.append(f"Sized at {lots.value} lots to keep the loss within your "
+                   f"risk setting if the stop is hit.")
+
+    return why
