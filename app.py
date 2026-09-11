@@ -425,7 +425,61 @@ def origin_chip(origin: str) -> str:
 
 # ── chart ────────────────────────────────────────────────────────────
 
+def price_header(row: dict):
+    """Big price, symbol pills and the state line — the terminal look."""
+    sym, d = row["symbol"], row["decision"]
+    meta = SYMBOLS[sym]
+    dig = meta["digits"]
+    c = UP if row["change"] >= 0 else DOWN
+    v = row["view"]
+
+    bits = []
+    for tf, rd in v.reads.items():
+        if rd.structure != "none":
+            bits.append(f"{rd.structure} {tf}")
+            break
+    if d.taken:
+        bits.insert(0, f"{d.direction} SETUP")
+    elif row.get("watch"):
+        bits.insert(0, f"{row['watch'].direction} FORMING")
+    gaps = sum(rd.unfilled_fvgs for rd in v.reads.values())
+    if gaps:
+        bits.append("FVG OPEN")
+    ob = next((rd.order_block for rd in v.reads.values() if rd.order_block), None)
+    if ob:
+        bits.append(ob.upper())
+    state = "  •  ".join(bits) or "NO SIGNAL"
+    state_col = UP if d.taken else (WARN if row.get("watch") else FAINT)
+
+    live = [n for n, a, b in [("TOKYO", 0, 9), ("LONDON", 7, 16), ("NEW YORK", 12, 21)]
+            if a <= datetime.now(timezone.utc).hour < b]
+    session = (f"—— {' + '.join(live)} OPEN" if live else "—— MARKETS QUIET")
+
+    st.markdown(f"""
+    <div style='padding:2px 0 10px'>
+      <div style='display:flex;align-items:baseline;gap:10px;flex-wrap:wrap'>
+        <span style='font-size:30px;font-weight:600;letter-spacing:-.02em'>{sym}</span>
+        <span class='zl-muted' style='font-size:12px;letter-spacing:.08em'>
+          {meta['mt5']} · {row['tf']}</span>
+        <span style='margin-left:auto'>{origin_chip(row['origin'])}</span>
+      </div>
+      <div style='display:flex;align-items:baseline;gap:12px;margin-top:2px'>
+        <span class='mono' style='font-size:40px;font-weight:500;letter-spacing:-.03em;
+              line-height:1.05'>{row['price']:,.{dig}f}</span>
+        <span class='mono' style='font-size:16px;color:{c}'>{row['change']:+.2f}%</span>
+      </div>
+      <div class='mono' style='font-size:12.5px;color:{WARN};margin-top:12px;
+           letter-spacing:.06em'>{session}</div>
+      <div class='mono' style='font-size:12.5px;color:{state_col};margin-top:3px;
+           letter-spacing:.06em'>{state}</div>
+    </div>""", unsafe_allow_html=True)
+
+
 def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> go.Figure:
+    """
+    Terminal-style chart: clean candles, levels as dashed lines carrying their
+    own label, price axis on the left, nothing competing with the price action.
+    """
     symbol, df = row["symbol"], row["primary"]
     dig = SYMBOLS[symbol]["digits"]
     zones = build_zones(df, rules)
@@ -435,97 +489,87 @@ def chart(row: dict, rules: Rules, bars: int = 120, show_daily: bool = True) -> 
     view = df.iloc[-bars:].reset_index(drop=True)
     price = float(view["close"].iloc[-1])
     lo_v, hi_v = float(view["low"].min()), float(view["high"].max())
-    pad = (hi_v - lo_v) * 0.09
+    pad = (hi_v - lo_v) * 0.10
     y_lo, y_hi = lo_v - pad, hi_v + pad
+
+    t0, t1 = view["time"].iloc[0], view["time"].iloc[-1]
+    step = view["time"].iloc[1] - view["time"].iloc[0]
+    right = t1 + step * 2
+
+    fig = go.Figure(go.Candlestick(
+        x=view["time"], open=view["open"], high=view["high"], low=view["low"],
+        close=view["close"], increasing_line_color=UP, decreasing_line_color=DOWN,
+        increasing_fillcolor=UP, decreasing_fillcolor=DOWN, line_width=1,
+        whiskerwidth=0.15, showlegend=False))
+
+    drawn = []
+
+    def level(value, color, label, dash="dash", width=1.6):
+        """A dashed line across the chart with its label sitting on it."""
+        if not (y_lo < value < y_hi):
+            return
+        for v, _ in drawn:
+            if abs(v - value) < (y_hi - y_lo) * 0.022:
+                return
+        drawn.append((value, label))
+        fig.add_shape(type="line", x0=t0, x1=right, y0=value, y1=value,
+                      line=dict(color=color, width=width, dash=dash))
+        fig.add_annotation(x=right, y=value, text=f"{label} {value:,.{dig}f}",
+                           showarrow=False, xanchor="right", yanchor="bottom",
+                           yshift=3, font=dict(size=11, color=color,
+                                               family="JetBrains Mono, monospace"))
+
+    d = row["decision"]
+    if d.taken:
+        level(d.entry, "#6ba4f0", "ENTRY")
+        level(d.stop_loss, DOWN, "SL")
+        level(d.take_profit, UP, "TP")
+
+    for ob in blocks[:1]:
+        mid = (ob.low + ob.high) / 2
+        fig.add_shape(type="rect", x0=t0, x1=right, y0=ob.low, y1=ob.high,
+                      fillcolor="rgba(217,178,106,.09)", layer="below",
+                      line=dict(width=0))
+        level(mid, WARN, "OB ZONE")
+
+    for g in gaps[-1:]:
+        fig.add_shape(type="rect", x0=t0, x1=right, y0=g.low, y1=g.high,
+                      fillcolor="rgba(145,132,217,.12)", layer="below",
+                      line=dict(width=0))
+        level((g.low + g.high) / 2, A300, "FVG", "dot", 1.2)
 
     sups = [z for z in zones if z.kind == "support"]
     ress = [z for z in zones if z.kind == "resistance"]
     near_sup = max([z for z in sups if z.mid <= price] or sups, key=lambda z: z.mid, default=None)
     near_res = min([z for z in ress if z.mid >= price] or ress, key=lambda z: z.mid, default=None)
     if near_sup:
-        y_lo = min(y_lo, near_sup.low - pad * 0.5)
+        level(near_sup.mid, UP, "SUPPORT", "dash", 1.2)
     if near_res:
-        y_hi = max(y_hi, near_res.high + pad * 0.5)
-
-    t0, t1 = view["time"].iloc[0], view["time"].iloc[-1]
-    step = view["time"].iloc[1] - view["time"].iloc[0]
-    right = t1 + step * 9
-
-    fig = go.Figure(go.Candlestick(
-        x=view["time"], open=view["open"], high=view["high"], low=view["low"],
-        close=view["close"], increasing_line_color=UP, decreasing_line_color=DOWN,
-        increasing_fillcolor=UP, decreasing_fillcolor=DOWN, line_width=1,
-        whiskerwidth=0.2, showlegend=False))
-
-    def band(lo, hi, fill, edge, label, start=None, dash=None):
-        if hi < y_lo or lo > y_hi:
-            return
-        floor_h = (y_hi - y_lo) * 0.014
-        if (hi - lo) < floor_h:
-            mid = (lo + hi) / 2
-            lo, hi = mid - floor_h / 2, mid + floor_h / 2
-        fig.add_shape(type="rect", x0=start or t0, x1=right, y0=lo, y1=hi, fillcolor=fill,
-                      layer="below", line=dict(color=edge, width=1, dash=dash or "solid"))
-        fig.add_annotation(x=start or t0, y=hi, text=f" {label} ", showarrow=False,
-                           xanchor="left", yanchor="bottom", bgcolor="rgba(22,24,38,.88)",
-                           borderpad=2, font=dict(size=9.5, color=edge, family="Inter"))
-
-    if near_sup:
-        band(near_sup.low, near_sup.high, "rgba(95,191,143,.12)", UP,
-             f"SUPPORT {near_sup.mid:,.{dig}f}")
-    if near_res:
-        band(near_res.low, near_res.high, "rgba(224,123,135,.12)", DOWN,
-             f"RESISTANCE {near_res.mid:,.{dig}f}")
-
-    def x_at(idx):
-        off = idx - (len(df) - len(view))
-        return view["time"].iloc[off] if 0 <= off < len(view) else t0
-
-    for g in gaps[-2:]:
-        band(g.low, g.high, "rgba(145,132,217,.15)", A300, "FVG", x_at(g.index), "dot")
-    for ob in blocks[:1]:
-        band(ob.low, ob.high, "rgba(145,132,217,.28)", ACCENT,
-             f"{ob.direction[:4].upper()} OB · {ob.event}", x_at(ob.index))
+        level(near_res.mid, DOWN, "RESISTANCE", "dash", 1.2)
 
     if show_daily:
-        for lv in row["levels"][:5]:
-            if not (y_lo < lv.price < y_hi):
-                continue
-            col = {"resistance": DOWN, "support": UP}.get(lv.kind, FAINT)
-            fig.add_shape(type="line", x0=t0, x1=right, y0=lv.price, y1=lv.price,
-                          line=dict(color=col, width=1, dash="dash"))
-            fig.add_annotation(x=t1, y=lv.price, text=f" {lv.name} ", showarrow=False,
-                               xanchor="right", yanchor="bottom", bgcolor="rgba(22,24,38,.85)",
-                               borderpad=2, font=dict(size=9, color=col, family="Inter"))
+        for lv in row["levels"][:3]:
+            level(lv.price, FAINT, lv.name.upper(), "dot", 1)
 
-    d = row["decision"]
-    if d.taken:
-        for level, col, tag in [(d.entry, A300, "ENTRY"), (d.stop_loss, DOWN, "SL"),
-                                (d.take_profit, UP, "TP")]:
-            fig.add_shape(type="line", x0=t1 - step * 25, x1=right, y0=level, y1=level,
-                          line=dict(color=col, width=1.4))
-            fig.add_annotation(x=right, y=level, text=f" {tag} {level:,.{dig}f} ",
-                               showarrow=False, xanchor="left", yanchor="middle",
-                               bgcolor=col, borderpad=2,
-                               font=dict(size=9.5, color="#161826", family="Inter"))
-    else:
-        fig.add_shape(type="line", x0=t0, x1=right, y0=price, y1=price,
-                      line=dict(color=MUTED, width=1, dash="dot"))
-        fig.add_annotation(x=right, y=price, text=f" {price:,.{dig}f} ", showarrow=False,
-                           xanchor="left", yanchor="middle", bgcolor=A300, borderpad=3,
-                           font=dict(size=10.5, color="#161826", family="Inter"))
+    fig.add_annotation(x=t1, y=price, text=f" {price:,.{dig}f} ", showarrow=False,
+                       xanchor="left", yanchor="middle", bgcolor=A300, borderpad=3,
+                       font=dict(size=10.5, color="#161826",
+                                 family="JetBrains Mono, monospace"))
 
     fig.update_layout(
-        height=470, margin=dict(l=4, r=88, t=8, b=4), dragmode="pan",
-        paper_bgcolor=SURFACE, plot_bgcolor=SURFACE, showlegend=False,
-        font=dict(color=MUTED, family="Inter", size=11), hovermode="x unified",
+        height=430, margin=dict(l=6, r=10, t=6, b=6), dragmode="pan",
+        paper_bgcolor=BG, plot_bgcolor=BG, showlegend=False,
+        font=dict(color=MUTED, family="JetBrains Mono, monospace", size=11),
+        hovermode="x unified",
         hoverlabel=dict(bgcolor=RAISED, bordercolor=LINE,
                         font=dict(color=TEXT, family="Inter", size=11)),
-        xaxis=dict(rangeslider_visible=False, gridcolor=LINE, showline=False, zeroline=False,
-                   range=[t0, right], showspikes=True, spikemode="across", spikesnap="cursor",
-                   spikethickness=1, spikedash="dot", spikecolor="rgba(233,233,237,.25)"),
-        yaxis=dict(gridcolor=LINE, side="right", zeroline=False, range=[y_lo, y_hi],
-                   tickformat=f",.{dig}f"))
+        xaxis=dict(rangeslider_visible=False, gridcolor="rgba(233,233,237,.05)",
+                   showline=False, zeroline=False, range=[t0, right],
+                   tickformat="%H:%M", showspikes=True, spikemode="across",
+                   spikesnap="cursor", spikethickness=1, spikedash="dot",
+                   spikecolor="rgba(233,233,237,.22)"),
+        yaxis=dict(gridcolor="rgba(233,233,237,.07)", side="left", zeroline=False,
+                   range=[y_lo, y_hi], tickformat=f",.{dig}f", showline=False))
     return fig
 
 
@@ -849,6 +893,7 @@ def face_app():
 
         row = cached_row(sym, r)
         d, meta, dig = row["decision"], SYMBOLS[sym], SYMBOLS[sym]["digits"]
+        price_header(row)
 
         if row["origin"] == "demo":
             note("This symbol is on <b>demo data</b> — the analysis is real but the prices "
@@ -933,40 +978,42 @@ def face_app():
 
     # ── Chart ──
     def _chart():
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            sym = st.selectbox("Symbol", list(SYMBOLS.keys()),
-                               index=list(SYMBOLS.keys()).index(st.session_state["symbol"]),
-                               key="chart_sym")
-            st.session_state["symbol"] = sym
-        with c2:
-            tf_picker("tf_chart")
+        keys = list(SYMBOLS.keys())
+        quick = st.session_state["watch"][:6] or keys[:6]
+        picked = st.radio("Symbol", quick,
+                          index=quick.index(st.session_state["symbol"])
+                          if st.session_state["symbol"] in quick else 0,
+                          horizontal=True, label_visibility="collapsed", key="ch_quick")
+        if picked != st.session_state["symbol"]:
+            st.session_state["symbol"] = picked
+            st.rerun()
+        tf_picker("tf_chart")
 
-        c3, c4 = st.columns([2, 1])
-        span = c3.radio("Bars", [60, 120, 200, 300], index=1, horizontal=True,
-                        label_visibility="collapsed")
-        show_daily = c4.toggle("Daily levels", True)
-
+        sym = st.session_state["symbol"]
         row = cached_row(sym, r)
+        price_header(row)
+
+        c1, c2, c3 = st.columns([2, 1, 1])
+        span = c1.radio("Bars", [60, 120, 200, 300], index=1, horizontal=True,
+                        label_visibility="collapsed")
+        show_daily = c2.toggle("Daily levels", True)
         age = cache_age(sym, row["tf"])
-        st.markdown(f"<div style='display:flex;align-items:center;gap:8px;margin:2px 0 6px'>"
-                    f"<span style='font-size:13px'>{SYMBOLS[sym]['mt5']} · "
-                    f"{TIMEFRAMES[row['tf']]['label']}</span>"
-                    f"<span class='mono' style='font-size:15px'>"
-                    f"{row['price']:,.{SYMBOLS[sym]['digits']}f}</span>"
-                    f"<span class='mono' style='font-size:12px;color:"
-                    f"{UP if row['change']>=0 else DOWN}'>{row['change']:+.2f}%</span>"
-                    f"<span style='margin-left:auto'>{origin_chip(row['origin'])}</span>"
-                    + (f"<span class='zl-muted'>{age//60}m old</span>" if age else "")
-                    + "</div>", unsafe_allow_html=True)
+        c3.markdown(f"<div class='zl-muted' style='padding-top:8px;text-align:right'>"
+                    + (f"{age//60}m old" if age else "live") + "</div>",
+                    unsafe_allow_html=True)
+
         st.plotly_chart(chart(row, r, span, show_daily), use_container_width=True,
                         config={"displayModeBar": False, "scrollZoom": True})
-        legend = "".join(f"<span class='zl-chip'><span style='color:{c}'>■</span> {t}</span>"
-                         for c, t in [(UP, "Support"), (DOWN, "Resistance"),
-                                      (A300, "Fair value gap"), (ACCENT, "Order block"),
-                                      (FAINT, "Daily levels")])
-        st.markdown(f"<div style='margin-top:6px'>{legend}</div>", unsafe_allow_html=True)
-        if row.get("watch"):
+
+        legend = "".join(f"<span class='zl-chip'><span style='color:{c}'>—</span> {t}</span>"
+                         for c, t in [("#6ba4f0", "Entry"), (DOWN, "Stop / resistance"),
+                                      (UP, "Target / support"), (WARN, "Order block"),
+                                      (A300, "Fair value gap"), (FAINT, "Daily levels")])
+        st.markdown(f"<div style='margin-top:4px'>{legend}</div>", unsafe_allow_html=True)
+
+        if row["decision"].taken:
+            why_block(row)
+        elif row.get("watch"):
             watch_card(row["watch"], sym)
 
     # ── Market ──
