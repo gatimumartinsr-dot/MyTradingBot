@@ -29,6 +29,8 @@ import visuals as viz
 from backtest import run as backtest_run, sweep as backtest_sweep
 from market import (MTF_LADDER, SYMBOLS, TIMEFRAMES, DataError, cache_age,
                     fetch, pips, spread_note)
+from setups import (BAND_COLOR, WEIGHTS, build_plan, currency_strength,
+                    find_liquidity, range_state, rsi, session_levels)
 from strategy import (Rules, atr, build_zones, calculate_lot_size, confluence,
                       daily_zones, evaluate, explain, find_fvgs, mtf_grade,
                       multi_timeframe, order_blocks, reversal_watch)
@@ -226,7 +228,8 @@ DEFAULTS = {
     "tg_token": "", "tg_chat": "", "td_key": "", "account_size": 1000.0,
     "watch": ["BTCUSD", "ETHUSD", "XAUUSD", "EURUSD", "GBPUSD", "NAS100"],
     "ladder": list(MTF_LADDER), "preset": "Balanced", "engine": "Zonelock",
-    "tape": True, "notes": "", "beginner": True,
+    "tape": True, "notes": "", "beginner": True, "plan_open": None,
+    "min_score": 60,
 }
 for k, v in DEFAULTS.items():
     st.session_state.setdefault(k, v)
@@ -373,6 +376,21 @@ def telegram(text: str):
 
 # ── analysis ─────────────────────────────────────────────────────────
 
+def _news_for(symbol: str):
+    """Minutes until the next high-impact event that touches this symbol."""
+    events, _ = economic_calendar()
+    now = datetime.now(timezone.utc)
+    sym = symbol.upper()
+    for e in events:
+        if e["impact"] != "high" or e["time"] < now:
+            continue
+        cur = e["currency"]
+        if cur in sym or (cur == "USD" and any(
+                k in sym for k in ("XAU", "US30", "NAS", "SPX", "OIL", "BTC", "ETH"))):
+            return int((e["time"] - now).total_seconds() // 60), e["title"]
+    return None, ""
+
+
 def analyse(symbol: str, rules: Rules, td_key: str, ladder=None, base=None) -> dict:
     ladder = ladder or st.session_state["ladder"]
     base = base or st.session_state["tf"]
@@ -410,11 +428,22 @@ def analyse(symbol: str, rules: Rules, td_key: str, ladder=None, base=None) -> d
     sups = [z for z in zones if z.kind == "support"]
     ress = [z for z in zones if z.kind == "resistance"]
 
+    news_mins, news_title = _news_for(symbol)
+    plan = build_plan(symbol, SYMBOLS[symbol]["mt5"], SYMBOLS[symbol]["digits"], dec,
+                      primary, view, conf, rules, timeframe=base,
+                      news_minutes=news_mins, news_title=news_title,
+                      reasons=explain(dec, view, conf, symbol))
+    vol_state, vol_ratio = range_state(primary)
+
     return {"symbol": symbol, "tf": base, "decision": dec, "price": price, "atr": a,
             "change": change, "levels": levels, "confluence": conf, "view": view,
             "grade": mtf_grade(dec, view, conf), "frames": frames, "origins": origins,
             "origin": origins.get(base, "demo"), "primary": primary, "d1": d1,
             "watch": watch, "why": explain(dec, view, conf, symbol),
+            "plan": plan, "score": plan.score if plan else None,
+            "liquidity": plan.liquidity if plan else find_liquidity(primary, rules),
+            "rsi": rsi(primary), "vol_state": vol_state, "vol_ratio": vol_ratio,
+            "sessions": session_levels(primary),
             "support": max([z for z in sups if z.mid <= price] or sups,
                            key=lambda z: z.mid, default=None),
             "resistance": min([z for z in ress if z.mid >= price] or ress,
@@ -432,8 +461,8 @@ def run_scan(rules: Rules):
         except Exception as exc:
             failed.append(f"{sym}: {exc}")
     bar.empty()
-    order = {"A": 0, "B": 1, "C": 2, "—": 3}
-    out.sort(key=lambda r: (order[r["grade"]], -(r["decision"].rr or 0)))
+    out.sort(key=lambda r: (-(r["score"].total if r.get("score") else -1),
+                            -(r["decision"].rr or 0)))
     st.session_state["scan"] = {"rows": out, "failed": failed}
     st.session_state["scanned_at"] = datetime.now(timezone.utc)
 
@@ -490,9 +519,18 @@ def origin_chip(origin: str) -> str:
     return f"<span class='zl-chip' style='background:{c}22;color:{c}'>{origin.upper()}</span>"
 
 
+def score_pill(row: dict) -> str:
+    sc = row.get("score")
+    if not sc or not row["decision"].taken:
+        return "<span class='zl-chip'>—</span>"
+    return (f"<span class='zl-chip' style='background:{sc.color}22;color:{sc.color};"
+            f"font-weight:600'>{sc.band} · {sc.total}%</span>")
+
+
 def state_of(row: dict):
+    sc = row.get("score")
     if row["decision"].taken:
-        return "SETUP", UP
+        return (sc.band if sc else "SETUP"), (sc.color if sc else UP)
     if row.get("watch"):
         return row["watch"].urgency.upper(), WARN
     return "—", FAINT
@@ -723,6 +761,135 @@ def setup_card(row: dict, key_prefix: str = ""):
         st.success(msg) if ok else st.warning(msg)
 
 
+def score_panel(row: dict):
+    """The 0-100 score with every point attributed."""
+    sc = row.get("score")
+    if not sc:
+        return
+    bars = ""
+    for f in sc.factors:
+        col = UP if f.pct >= 80 else (A300 if f.pct >= 50 else
+                                      (WARN if f.pct > 0 else FAINT))
+        bars += (f"<div class='zl-row' style='padding:6px 0'>"
+                 f"<span style='flex:1;font-size:11.5px'>{f.name}</span>"
+                 f"<span class='zl-muted' style='font-size:10.5px;flex:2;"
+                 f"text-align:right;padding-right:8px'>{f.detail}</span>"
+                 f"{viz.strength_bar(int(f.pct), col, 52)}"
+                 f"<span class='mono' style='font-size:10.5px;width:40px;"
+                 f"text-align:right;color:{col}'>{f.earned}/{f.weight}</span></div>")
+    if sc.news_penalty:
+        bars += (f"<div class='zl-row' style='padding:6px 0'>"
+                 f"<span style='flex:1;font-size:11.5px;color:{DOWN}'>News risk</span>"
+                 f"<span class='zl-muted' style='font-size:10.5px;flex:2;"
+                 f"text-align:right;padding-right:8px'>{sc.news_note}</span>"
+                 f"<span class='mono' style='font-size:10.5px;color:{DOWN}'>"
+                 f"−{sc.news_penalty}</span></div>")
+    panel("Confidence — where every point came from", bars,
+          f"<span style='color:{sc.color};font-weight:600'>{sc.total}% · {sc.band}</span>")
+
+
+def plan_card(row: dict, key_prefix: str = "", rank: int = 0):
+    """The spec's trade-plan output: zone, staged targets, invalidation."""
+    plan = row.get("plan")
+    if plan is None:
+        return
+    sc, d = plan.score, plan.digits
+    side = UP if plan.direction == "BUY" else DOWN
+    v = row["view"]
+    risk_cash = st.session_state["account_size"] * st.session_state["rules"].risk_percent / 100
+    win_cash = risk_cash * plan.rr2
+    tags = "".join(f"<span class='zl-chip'>{t}</span>" for t in row["decision"].tags)
+    rank_badge = (f"<span class='zl-grade' style='background:{RAISED};color:{MUTED};"
+                  f"font-size:11px'>{rank}</span>") if rank else ""
+    warn = (f"<br><b style='color:{WARN}'>⚠ {plan.news_warning}</b>"
+            if plan.news_warning else "")
+
+    head = (f"<div class='zp-head'>{rank_badge}"
+            f"<span class='zl-grade' style='background:{sc.color}22;color:{sc.color}'>"
+            f"{sc.band}</span>"
+            f"<span class='t' style='letter-spacing:.03em;font-size:13.5px;"
+            f"text-transform:none'>{plan.mt5}</span>"
+            f"<span class='zl-chip' style='background:{side}22;color:{side}'>"
+            f"{plan.direction}</span>"
+            f"<span class='zl-muted' style='font-size:11px'>{plan.setup_type}</span>"
+            f"<span class='r'>{plan.timeframe} &nbsp;"
+            f"{viz.strength_bar(sc.total, sc.color, 58)} "
+            f"<b style='color:{sc.color}'>{sc.total}%</b></span></div>")
+
+    body = (f"<div class='zp-body'>"
+            f"<div style='font-size:12.5px;line-height:1.5'>"
+            f"{row['decision'].headline}</div>"
+            f"<div style='margin-top:8px'>{tags}"
+            f"<span class='zl-chip' style='background:{ACCENT}22;color:{A300}'>"
+            f"stack {v.alignment} {int(v.agreement*100)}%</span>"
+            f"{origin_chip(row['origin'])}</div>"
+            f"<div class='zl-lv'>"
+            f"<div><div class='k'>Entry zone</div>"
+            f"<div class='v mono' style='font-size:12.5px'>"
+            f"{plan.entry_low:,.{d}f}–{plan.entry_high:,.{d}f}</div></div>"
+            f"<div><div class='k'>Stop loss</div>"
+            f"<div class='v mono' style='color:{DOWN}'>{plan.stop:,.{d}f}</div></div>"
+            f"<div><div class='k'>Size</div>"
+            f"<div class='v mono'>{plan.lots:.2f} lots</div></div>"
+            f"<div><div class='k'>Risking</div>"
+            f"<div class='v mono' style='color:{DOWN}'>${risk_cash:,.2f}</div></div>"
+            f"</div>"
+            f"<div class='zl-lv'>"
+            f"<div><div class='k'>TP1 · 1:{plan.rr1:g}</div>"
+            f"<div class='v mono' style='color:{UP}'>{plan.tp1:,.{d}f}</div></div>"
+            f"<div><div class='k'>TP2 · 1:{plan.rr2:g}</div>"
+            f"<div class='v mono' style='color:{UP}'>{plan.tp2:,.{d}f}</div></div>"
+            f"<div><div class='k'>TP3 · 1:{plan.rr3:g}</div>"
+            f"<div class='v mono' style='color:{UP}'>{plan.tp3:,.{d}f}</div></div>"
+            f"<div><div class='k'>At TP2 you make</div>"
+            f"<div class='v mono' style='color:{UP}'>${win_cash:,.2f}</div></div>"
+            f"</div>"
+            f"<div class='zl-muted' style='margin-top:9px;padding-top:9px;"
+            f"border-top:1px solid {LINE}'>"
+            f"<b style='color:{DOWN}'>Invalid if</b> {plan.invalidation}.{warn}"
+            f"</div></div>")
+
+    st.markdown(f"<div class='zp'>{head}{body}</div>", unsafe_allow_html=True)
+
+    b1, b2, b3, b4 = st.columns(4)
+    if b1.button("Chart", key=f"{key_prefix}c{plan.symbol}", use_container_width=True):
+        st.session_state["symbol"] = plan.symbol
+        st.rerun()
+    open_now = st.session_state.get("plan_open") == plan.symbol
+    if b2.button("Close" if open_now else "Why", key=f"{key_prefix}p{plan.symbol}",
+                 use_container_width=True):
+        st.session_state["plan_open"] = None if open_now else plan.symbol
+        st.rerun()
+    if b3.button("Log", key=f"{key_prefix}l{plan.symbol}", use_container_width=True):
+        log_pick(row)
+        st.success(f"{plan.mt5} recorded in the journal.")
+    if b4.button("Alert", key=f"{key_prefix}a{plan.symbol}", use_container_width=True):
+        ok, msg = telegram(plan.telegram())
+        st.success(msg) if ok else st.warning(msg)
+
+    if open_now:
+        score_panel(row)
+        why_block(row)
+        liq = plan.liquidity
+        bs = f"{liq.buyside:,.{d}f}" if liq.buyside else "—"
+        ss = f"{liq.sellside:,.{d}f}" if liq.sellside else "—"
+        panel("Liquidity",
+              f"<div class='zl-muted'>{liq.note}.</div>"
+              f"<div class='zl-lv' style='margin-top:8px'>"
+              f"<div><div class='k'>Equal highs</div><div class='v mono' "
+              f"style='font-size:12.5px'>{len(liq.equal_highs)}</div></div>"
+              f"<div><div class='k'>Equal lows</div><div class='v mono' "
+              f"style='font-size:12.5px'>{len(liq.equal_lows)}</div></div>"
+              f"<div><div class='k'>Buy-side pool</div><div class='v mono' "
+              f"style='font-size:12.5px'>{bs}</div></div>"
+              f"<div><div class='k'>Sell-side pool</div><div class='v mono' "
+              f"style='font-size:12.5px'>{ss}</div></div></div>")
+        st.code(f"{plan.mt5}  {plan.direction}  {plan.lots:.2f}   "
+                f"entry {plan.entry_low:,.{d}f}-{plan.entry_high:,.{d}f}   "
+                f"SL {plan.stop:,.{d}f}   TP1 {plan.tp1:,.{d}f}   "
+                f"TP2 {plan.tp2:,.{d}f}   TP3 {plan.tp3:,.{d}f}", language=None)
+
+
 def safe(fn, label):
     try:
         fn()
@@ -907,7 +1074,7 @@ def face_app():
     if not st.session_state["ladder"]:
         st.session_state["ladder"] = ["M15", "H1", "H4", "D1"]
 
-    tabs = st.tabs(["Dashboard", "Scanner", "Setups", "Charts", "Analysis", "Levels",
+    tabs = st.tabs(["Dashboard", "Scanner", "A+ Setups", "Charts", "Analysis", "Levels",
                     "Risk", "News", "Journal", "Learn", "Settings"])
 
     def tf_picker(key: str):
@@ -1113,26 +1280,49 @@ def face_app():
     # ── 3 · Setups ──
     def _setups():
         st.markdown("<div class='zl-muted' style='margin-bottom:9px'><b>Step 2 — the "
-                    "setups.</b> Ranked best first. A-grade means the reward is large, the "
-                    "timeframes agree, and daily levels back it up.</div>",
-                    unsafe_allow_html=True)
+                    "setups, ranked.</b> Each one is scored out of 100 from nine factors, "
+                    "with news risk subtracted. 90+ is A+, 80+ is A, 70+ is B. Below 60 is "
+                    "not shown.</div>", unsafe_allow_html=True)
         if not scan:
             note("Run a scan first.", "accent")
             return
-        found = [x for x in scan["rows"] if x["decision"].taken]
+        st.session_state["min_score"] = st.slider(
+            "Only show setups scoring at least", 50, 95,
+            st.session_state["min_score"], 5)
+        floor = st.session_state["min_score"]
+        found = [x for x in scan["rows"] if x["decision"].taken
+                 and x["score"] and x["score"].total >= floor]
+        below = [x for x in scan["rows"] if x["decision"].taken
+                 and x["score"] and x["score"].total < floor]
         watching = [x for x in scan["rows"] if x.get("watch")]
 
         if not found:
-            note("No confirmed setups. Price has to be <i>at</i> a level <b>and</b> a candle "
-                 "has to close proving the turn. Both, or nothing.", "muted")
-        for row in found:
-            setup_card(row, "su_")
+            note(f"Nothing scoring {floor} or above. Price has to be <i>at</i> a level "
+                 f"<b>and</b> a candle has to close proving the turn — then the other "
+                 f"factors have to add up.", "muted")
+        for i, row in enumerate(found, 1):
+            plan_card(row, "su_", i)
 
         if watching:
             st.markdown("##### Forming — not confirmed yet")
             for row in sorted(watching, key=lambda x: {"imminent": 0, "watching": 1,
                                                        "approaching": 2}[x["watch"].urgency]):
                 watch_card(row["watch"], row["symbol"])
+
+        if below:
+            with st.expander(f"{len(below)} setups scored below {floor}"):
+                for x in below:
+                    sc = x["score"]
+                    miss = ", ".join(f.name.lower() for f in sc.missing_factors[:3])
+                    st.markdown(f"<div class='zl-row'>"
+                                f"<span class='zl-chip' style='background:{sc.color}22;"
+                                f"color:{sc.color}'>{sc.total}%</span>"
+                                f"<span style='flex:1;font-size:12px'>"
+                                f"{SYMBOLS[x['symbol']]['mt5']} · "
+                                f"{x['plan'].setup_type if x.get('plan') else ''}</span>"
+                                f"<span class='zl-muted' style='font-size:10.5px'>"
+                                f"missing {miss}</span></div>",
+                                unsafe_allow_html=True)
 
         passed = [x for x in scan["rows"] if not x["decision"].taken and not x.get("watch")]
         if passed:
@@ -1804,7 +1994,7 @@ def face_app():
 
     fns = [_dash, _scanner, _setups, _charts, _analysis, _levels, _risk, _news,
            _journal, _learn, _settings]
-    labels = ["Dashboard", "Scanner", "Setups", "Charts", "Analysis", "Levels", "Risk",
+    labels = ["Dashboard", "Scanner", "A+ Setups", "Charts", "Analysis", "Levels", "Risk",
               "News", "Journal", "Learn", "Settings"]
     for tab, fn, label in zip(tabs, fns, labels):
         with tab:
