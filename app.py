@@ -973,7 +973,7 @@ def face_setup():
                                     "3% risk · takes more trades"])
         st.session_state["account_size"] = st.number_input(
             "How much is in your trading account? ($)", 50.0, 1_000_000.0,
-            st.session_state["account_size"], 50.0,
+            st.session_state["account_size"], 50.0, key="ob_acct",
             help="Only used to work out position size. Nothing is connected.")
 
         r = Rules()
@@ -1060,9 +1060,11 @@ def face_app():
         st.session_state["ladder"] = st.multiselect("Timeframes to read", tf_keys,
                                                     st.session_state["ladder"])
         st.session_state["account_size"] = st.number_input(
-            "Account size ($)", 50.0, 1_000_000.0, st.session_state["account_size"], 50.0)
+            "Account size ($)", 50.0, 1_000_000.0, st.session_state["account_size"], 50.0,
+            key="sb_acct")
         st.session_state["beginner"] = st.toggle("Explain everything",
-                                                 st.session_state["beginner"])
+                                                 st.session_state["beginner"],
+                                                 key="sb_beg")
         st.divider()
         if st.button("Save settings", use_container_width=True):
             st.success("Saved.") if save_profile() else st.warning("Could not save.")
@@ -1288,7 +1290,7 @@ def face_app():
             return
         st.session_state["min_score"] = st.slider(
             "Only show setups scoring at least", 50, 95,
-            st.session_state["min_score"], 5)
+            st.session_state["min_score"], 5, key="su_floor")
         floor = st.session_state["min_score"]
         found = [x for x in scan["rows"] if x["decision"].taken
                  and x["score"] and x["score"].total >= floor]
@@ -1360,8 +1362,8 @@ def face_app():
 
         c1, c2, c3 = st.columns([1.6, 1, 1])
         span = c1.radio("Bars", [60, 120, 200, 300], index=1, horizontal=True,
-                        label_visibility="collapsed")
-        show_daily = c2.toggle("Daily levels", True)
+                        label_visibility="collapsed", key="ch_bars")
+        show_daily = c2.toggle("Daily levels", True, key="ch_daily")
         engine = c3.radio("Engine", ["Zonelock", "TradingView"],
                           index=0 if st.session_state["engine"] == "Zonelock" else 1,
                           horizontal=True, label_visibility="collapsed", key="ch_eng")
@@ -1505,8 +1507,9 @@ def face_app():
                                index=list(SYMBOLS.keys()).index(st.session_state["symbol"]),
                                key="rk_sym")
             bal = st.number_input("Account balance ($)", 10.0, 1_000_000.0,
-                                  st.session_state["account_size"], 10.0)
-            risk_pct = st.slider("Risk per trade (%)", 0.25, 5.0, r.risk_percent, 0.25)
+                                  st.session_state["account_size"], 10.0, key="rk_bal")
+            risk_pct = st.slider("Risk per trade (%)", 0.25, 5.0, r.risk_percent, 0.25,
+                                 key="rk_pct")
             row = cached_row(sym, r)
             dig = SYMBOLS[sym]["digits"]
             d = row["decision"]
@@ -1514,15 +1517,17 @@ def face_app():
             default_stop = float(d.stop_loss) if d.taken else (
                 row["support"].low if row.get("support") else row["price"] * 0.995)
             entry = st.number_input("Entry price", value=round(default_entry, dig),
-                                    format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]))
+                                    format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]),
+                                    key="rk_entry")
             stop = st.number_input("Stop loss price", value=round(default_stop, dig),
-                                   format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]))
+                                   format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]),
+                                   key="rk_stop")
             target = st.number_input(
                 "Take profit price",
                 value=round(float(d.take_profit) if d.taken
                             else (row["resistance"].mid if row.get("resistance")
                                   else row["price"] * 1.01), dig),
-                format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]))
+                format=f"%.{dig}f", step=float(SYMBOLS[sym]["pip"]), key="rk_tp")
 
         with c2:
             risk_dist = abs(entry - stop)
@@ -1888,9 +1893,10 @@ def face_app():
                 st.rerun()
             st.session_state["beginner"] = st.toggle(
                 "Show the explanations everywhere", st.session_state["beginner"],
-                help="Turn off once you know the terms.")
+                key="st_beg", help="Turn off once you know the terms.")
             st.session_state["tape"] = st.toggle("Show the price ticker",
-                                                 st.session_state.get("tape", True))
+                                                 st.session_state.get("tape", True),
+                                                 key="st_tape")
 
         with t2:
             chosen = st.radio("Style", list(PRESETS.keys()),
@@ -1906,37 +1912,42 @@ def face_app():
                 r.require_reversal_candle = st.toggle(
                     "Wait for a reversal candle", r.require_reversal_candle,
                     help="Strongly recommended. Without it the app enters on price touching "
-                         "a level, with no proof it is holding.")
+                         "a level, with no proof it is holding.", key="st_rev")
                 r.require_fvg_unfilled = st.toggle("Need an unfilled gap",
-                                                   r.require_fvg_unfilled)
+                                                   r.require_fvg_unfilled, key="st_fvg")
                 r.require_ob_structure = st.toggle("Order block must come from a break",
-                                                   r.require_ob_structure)
-                r.accept_choch = st.toggle("Allow trend-reversal entries", r.accept_choch)
+                                                   r.require_ob_structure, key="st_ob")
+                r.accept_choch = st.toggle("Allow trend-reversal entries", r.accept_choch,
+                                           key="st_choch")
                 r.min_zone_touches = st.slider("Times price must have respected the level",
-                                               1, 5, r.min_zone_touches)
+                                               1, 5, r.min_zone_touches,
+                                               key="st_touch")
                 r.zone_atr_mult = st.slider("How thick a level counts as", 0.1, 1.0,
-                                            float(r.zone_atr_mult), 0.05)
+                                            float(r.zone_atr_mult), 0.05,
+                                            key="st_thick")
                 r.swing_lookback = st.slider("How far back to look for turns", 2, 8,
-                                             r.swing_lookback)
+                                             r.swing_lookback, key="st_swing")
             with c2:
                 st.markdown("##### Money")
                 r.base_lot = st.number_input("Smallest lot size", 0.01, 5.0, r.base_lot,
-                                             0.01, format="%.2f")
+                                             0.01, format="%.2f", key="st_lot")
                 r.risk_percent = st.slider("Risk per trade (%)", 0.25, 5.0,
-                                           r.risk_percent, 0.25)
+                                           r.risk_percent, 0.25, key="st_risk")
                 r.min_rr = st.slider("Reward must be at least this × the risk", 1.0, 4.0,
-                                     r.min_rr, 0.1)
+                                     r.min_rr, 0.1, key="st_rr")
                 r.max_open_positions = st.slider("Most trades open at once", 1, 10,
-                                                 r.max_open_positions)
+                                                 r.max_open_positions, key="st_open")
                 r.daily_profit_cap = st.number_input("Stop for the day after making ($)",
-                                                     0.0, 5000.0, r.daily_profit_cap, 5.0)
+                                                     0.0, 5000.0, r.daily_profit_cap,
+                                                     5.0, key="st_cap")
                 r.max_daily_loss = st.number_input("Stop for the day after losing ($)",
-                                                   0.0, 5000.0, r.max_daily_loss, 5.0)
+                                                   0.0, 5000.0, r.max_daily_loss, 5.0,
+                                                   key="st_loss")
                 st.markdown("##### Timing")
                 r.news_block_minutes = st.slider("Minutes to avoid around big news", 0, 120,
-                                                 r.news_block_minutes, 5)
+                                                 r.news_block_minutes, 5, key="st_news")
                 r.session_filter = st.toggle("Only trade a market in its own hours",
-                                             r.session_filter)
+                                             r.session_filter, key="st_sess")
             st.session_state["rules"] = r
             c1, c2 = st.columns(2)
             if c1.button("Save rules", use_container_width=True):
