@@ -246,6 +246,69 @@ def price_action(df: pd.DataFrame, direction: str) -> List[str]:
 # Setup type
 # ──────────────────────────────────────────────────────────────────────
 
+@dataclass
+class SwingLabels:
+    """HH / HL / LH / LL — the spec's structure vocabulary."""
+    sequence: List[Tuple[str, float, int]] = field(default_factory=list)
+    trend: str = "sideways"
+
+    @property
+    def last(self) -> str:
+        return self.sequence[-1][0] if self.sequence else "—"
+
+    @property
+    def recent(self) -> str:
+        return " → ".join(s[0] for s in self.sequence[-4:]) or "—"
+
+
+def label_swings(df: pd.DataFrame, rules: Optional[Rules] = None) -> SwingLabels:
+    rules = rules or Rules()
+    out = SwingLabels()
+    if len(df) < 30:
+        return out
+    highs, lows = swing_points(df, rules.swing_lookback)
+    points = sorted([(i, float(df["high"].values[i]), "H") for i in highs] +
+                    [(i, float(df["low"].values[i]), "L") for i in lows])
+    prev_h = prev_l = None
+    for idx, value, kind in points:
+        if kind == "H":
+            tag = "HH" if prev_h is not None and value > prev_h else (
+                "LH" if prev_h is not None else "H")
+            prev_h = value
+        else:
+            tag = "HL" if prev_l is not None and value > prev_l else (
+                "LL" if prev_l is not None else "L")
+            prev_l = value
+        out.sequence.append((tag, value, idx))
+
+    tail = [s[0] for s in out.sequence[-4:]]
+    ups = sum(1 for t in tail if t in ("HH", "HL"))
+    downs = sum(1 for t in tail if t in ("LH", "LL"))
+    out.trend = ("bullish" if ups > downs else
+                 "bearish" if downs > ups else "sideways")
+    return out
+
+
+def breaker_blocks(df: pd.DataFrame, rules: Optional[Rules] = None) -> List[dict]:
+    """An order block that failed and flipped — the spec's breaker block."""
+    rules = rules or Rules()
+    out = []
+    a = atr(df, 14)
+    if not a or a != a or len(df) < 40:
+        return out
+    for ob in order_blocks(df, rules):
+        later = df.iloc[ob.index + 1:]
+        if len(later) < 3:
+            continue
+        if ob.direction == "bullish" and (later["close"] < ob.low).any():
+            out.append({"direction": "bearish", "low": ob.low, "high": ob.high,
+                        "was": "bullish OB", "index": ob.index})
+        elif ob.direction == "bearish" and (later["close"] > ob.high).any():
+            out.append({"direction": "bullish", "low": ob.low, "high": ob.high,
+                        "was": "bearish OB", "index": ob.index})
+    return out
+
+
 def classify(decision: Decision, liq: Liquidity, df: pd.DataFrame,
              rules: Rules) -> Tuple[str, str]:
     """Name the setup and say in one line why it is that name."""

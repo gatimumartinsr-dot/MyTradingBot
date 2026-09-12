@@ -29,8 +29,9 @@ import visuals as viz
 from backtest import run as backtest_run, sweep as backtest_sweep
 from market import (MTF_LADDER, SYMBOLS, TIMEFRAMES, DataError, cache_age,
                     fetch, pips, spread_note)
-from setups import (BAND_COLOR, WEIGHTS, build_plan, currency_strength,
-                    find_liquidity, range_state, rsi, session_levels)
+from setups import (BAND_COLOR, WEIGHTS, active_session, breaker_blocks, build_plan,
+                    currency_strength, find_liquidity, label_swings, range_state,
+                    rsi, session_levels)
 from strategy import (Rules, atr, build_zones, calculate_lot_size, confluence,
                       daily_zones, evaluate, explain, find_fvgs, mtf_grade,
                       multi_timeframe, order_blocks, reversal_watch)
@@ -230,6 +231,14 @@ DEFAULTS = {
     "ladder": list(MTF_LADDER), "preset": "Balanced", "engine": "Zonelock",
     "tape": True, "notes": "", "beginner": True, "plan_open": None,
     "min_score": 60,
+    "groups": {"FX majors": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"],
+               "Metals & oil": ["XAUUSD", "USOIL"],
+               "Indices": ["US30", "NAS100", "SPX500"],
+               "Crypto": ["BTCUSD", "ETHUSD"]},
+    "alerts": {"aplus": True, "zone": True, "sweep": True, "bos": False,
+               "fvg": False, "news": True, "invalid": True},
+    "alert_floor": 80, "filter_class": "All", "filter_setup": "All",
+    "filter_trend": "Any", "filter_atr": 0.0,
 }
 for k, v in DEFAULTS.items():
     st.session_state.setdefault(k, v)
@@ -280,6 +289,10 @@ def save_profile():
                        "account_size": st.session_state["account_size"],
                        "preset": st.session_state["preset"],
                        "beginner": st.session_state["beginner"],
+                       "groups": st.session_state["groups"],
+                       "alerts": st.session_state["alerts"],
+                       "alert_floor": st.session_state["alert_floor"],
+                       "min_score": st.session_state["min_score"],
                        "notes": st.session_state["notes"]}, f, indent=2)
         return True
     except Exception:
@@ -297,7 +310,8 @@ def load_profile():
         if hasattr(r, k):
             setattr(r, k, v)
     st.session_state["rules"] = r
-    for key in ("watch", "ladder", "tf", "account_size", "preset", "beginner", "notes"):
+    for key in ("watch", "ladder", "tf", "account_size", "preset", "beginner",
+                "notes", "groups", "alerts", "alert_floor", "min_score"):
         if key in data:
             st.session_state[key] = data[key]
     return True
@@ -434,6 +448,7 @@ def analyse(symbol: str, rules: Rules, td_key: str, ladder=None, base=None) -> d
                       news_minutes=news_mins, news_title=news_title,
                       reasons=explain(dec, view, conf, symbol))
     vol_state, vol_ratio = range_state(primary)
+    swings = label_swings(primary, rules)
 
     return {"symbol": symbol, "tf": base, "decision": dec, "price": price, "atr": a,
             "change": change, "levels": levels, "confluence": conf, "view": view,
@@ -443,6 +458,7 @@ def analyse(symbol: str, rules: Rules, td_key: str, ladder=None, base=None) -> d
             "plan": plan, "score": plan.score if plan else None,
             "liquidity": plan.liquidity if plan else find_liquidity(primary, rules),
             "rsi": rsi(primary), "vol_state": vol_state, "vol_ratio": vol_ratio,
+            "swings": swings, "breakers": breaker_blocks(primary, rules),
             "sessions": session_levels(primary),
             "support": max([z for z in sups if z.mid <= price] or sups,
                            key=lambda z: z.mid, default=None),
@@ -477,19 +493,43 @@ def cached_row(symbol: str, rules: Rules):
         return analyse(symbol, rules, st.session_state["td_key"])
 
 
+def set_outcome(at: str, outcome: str):
+    """Stamp a result onto a logged pick, rewriting the journal file."""
+    if not os.path.exists(PICKS):
+        return
+    with open(PICKS, encoding="utf-8") as f:
+        rows = [json.loads(x) for x in f if x.strip()]
+    for row in rows:
+        if row.get("at") == at:
+            row["outcome"] = outcome
+    with open(PICKS, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row) + "\n")
+
+
 def log_pick(row: dict, outcome: str = "pending"):
     d, sym = row["decision"], row["symbol"]
+    plan, sc = row.get("plan"), row.get("score")
+    live = active_session()
     with open(PICKS, "a", encoding="utf-8") as f:
         f.write(json.dumps({
             "at": datetime.now(timezone.utc).isoformat(), "symbol": sym,
             "mt5": SYMBOLS[sym]["mt5"], "tf": row["tf"], "grade": row["grade"],
+            "band": sc.band if sc else row["grade"],
+            "score": sc.total if sc else None,
+            "setup_type": plan.setup_type if plan else "—",
+            "session": " + ".join(live) if live else "Off-session",
             "direction": d.direction, "entry": d.entry, "sl": d.stop_loss,
-            "tp": d.take_profit, "rr": d.rr, "lots": d.lots,
+            "tp": d.take_profit,
+            "tp1": plan.tp1 if plan else None, "tp2": plan.tp2 if plan else None,
+            "tp3": plan.tp3 if plan else None,
+            "rr": plan.rr2 if plan else d.rr, "lots": d.lots,
             "risk_pips": pips(sym, abs(d.entry - d.stop_loss)),
             "reward_pips": pips(sym, abs(d.take_profit - d.entry)),
             "headline": d.headline, "tags": d.tags, "why": row["why"],
+            "invalidation": plan.invalidation if plan else "",
             "confluence": row["confluence"], "alignment": row["view"].alignment,
-            "origin": row["origin"], "outcome": outcome}) + "\n")
+            "origin": row["origin"], "outcome": outcome, "lesson": ""}) + "\n")
 
 
 def picks(limit: int = 300):
@@ -1017,7 +1057,7 @@ def face_app():
     scanned = st.session_state["scanned_at"]
     age = f"{int((now - scanned).total_seconds() // 60)}m ago" if scanned else "not yet"
 
-    h1, h2, h3 = st.columns([2.5, 3, 1])
+    h1, h2, h3, h4 = st.columns([2.1, 2.6, 1.2, 0.85])
     with h1:
         st.markdown(f"""
         <div style='padding:2px 0'>
@@ -1028,8 +1068,8 @@ def face_app():
                     background:{ACCENT};display:block'></span></span>
             <span style='letter-spacing:.2em;font-size:13px;font-weight:600'>ZONELOCK</span>
           </div>
-          <div class='zl-muted' style='margin-top:2px;font-size:10.5px;letter-spacing:.05em'>
-            SCAN · ANALYSE · RANK · RECORD</div>
+          <div class='zl-muted' style='margin-top:2px;font-size:10px;letter-spacing:.05em'>
+            SCAN · SCORE · RANK · RECORD</div>
         </div>""", unsafe_allow_html=True)
     with h2:
         st.markdown(f"<div class='zl-clock' style='padding-top:3px'>{clocks}</div>",
@@ -1040,9 +1080,14 @@ def face_app():
                     f"<div class='zl-muted' style='font-size:10px'>"
                     f"{st.session_state['preset']} · scan {age}</div></div>",
                     unsafe_allow_html=True)
+    with h4:
+        if st.button("Sign out", use_container_width=True, key="hdr_out"):
+            save_profile()
+            st.session_state["stage"] = "login"
+            st.rerun()
 
-    st.markdown(f"<div class='zl-pipe'>Scan <b>→</b> Setups <b>→</b> Analyse <b>→</b> "
-                f"Levels <b>→</b> Rank <b>→</b> Alert <b>→</b> Journal"
+    st.markdown(f"<div class='zl-pipe'>Scan <b>→</b> Score <b>→</b> Rank <b>→</b> "
+                f"Levels <b>→</b> Risk <b>→</b> Alert <b>→</b> Journal"
                 f"<span style='margin-left:auto;color:{ACCENT if live else FAINT}'>"
                 f"{' + '.join(live) + ' OPEN' if live else 'MARKETS QUIET'}</span></div>",
                 unsafe_allow_html=True)
@@ -1077,7 +1122,8 @@ def face_app():
         st.session_state["ladder"] = ["M15", "H1", "H4", "D1"]
 
     tabs = st.tabs(["Dashboard", "Scanner", "A+ Setups", "Charts", "Analysis", "Levels",
-                    "Risk", "News", "Journal", "Learn", "Settings"])
+                    "Watchlist", "Risk", "News", "Journal", "Performance", "Learn",
+                    "Settings"])
 
     def tf_picker(key: str):
         chosen = st.radio("Timeframe", tf_keys, index=tf_keys.index(st.session_state["tf"]),
@@ -1119,42 +1165,47 @@ def face_app():
         rows = scan["rows"]
         found = [x for x in rows if x["decision"].taken]
         watching = [x for x in rows if x.get("watch")]
-        a_grade = [x for x in found if x["grade"] == "A"]
+        scored = [x for x in found if x.get("score")]
+        aplus = [x for x in scored if x["score"].band in ("A+", "A")]
+        best_score = max((x["score"].total for x in scored), default=0)
         demo_n = len([x for x in rows if x["origin"] == "demo"])
 
         if demo_n:
             note(f"<b>{demo_n} of {len(rows)} symbols are on demo prices.</b> Crypto works "
                  f"free; gold, FX and indices need a free data key — <b>Settings → Market "
-                 f"data</b>. Demo rows are marked.", "warn")
+                 f"data</b>.", "warn")
 
+        bc = BAND_COLOR.get(next((x["score"].band for x in scored), "Ignore"), FAINT)
         st.markdown(f"""
         <div class='zl-stats'>
           <div class='zl-stat'><div class='k'>Scanned</div><div class='v mono'>{len(rows)}</div>
             <div class='s'>× {len(st.session_state['ladder'])} timeframes</div></div>
-          <div class='zl-stat'><div class='k'>Ready to place</div>
+          <div class='zl-stat'><div class='k'>Setups</div>
             <div class='v mono' style='color:{UP if found else MUTED}'>{len(found)}</div>
-            <div class='s'>confirmed setups</div></div>
+            <div class='s'>{len(aplus)} at A or better</div></div>
+          <div class='zl-stat'><div class='k'>Top score</div>
+            <div class='v mono' style='color:{bc}'>{best_score}%</div>
+            <div class='s'>confidence</div></div>
           <div class='zl-stat'><div class='k'>Forming</div>
             <div class='v mono' style='color:{WARN if watching else MUTED}'>{len(watching)}</div>
-            <div class='s'>at a level, not confirmed</div></div>
-          <div class='zl-stat'><div class='k'>Best grade</div>
-            <div class='v mono' style='color:{UP if a_grade else MUTED}'>
-              {'A' if a_grade else (found[0]['grade'] if found else '—')}</div>
-            <div class='s'>{len(a_grade)} A-grade</div></div>
+            <div class='s'>at a level, unconfirmed</div></div>
         </div>""", unsafe_allow_html=True)
 
-        c1, c2 = st.columns([1, 1])
+        c1, c2 = st.columns([1, 2.4])
         if c1.button("Re-scan", use_container_width=True, key="d_scan"):
             run_scan(r)
             st.rerun()
         if upcoming:
             mins = int((upcoming["time"] - now).total_seconds() // 60)
             hh, mm = divmod(mins, 60)
-            c2.markdown(f"<div class='zl-muted' style='padding-top:8px'>Next big news · "
+            urgent = mins <= r.news_block_minutes
+            c2.markdown(f"<div class='zl-muted' style='padding-top:8px;color:"
+                        f"{DOWN if urgent else MUTED}'>"
+                        f"{'⚠ Entries paused — ' if urgent else 'Next big news · '}"
                         f"<b>{upcoming['currency']} {upcoming['title']}</b> in "
                         f"{hh}h {mm:02d}m</div>", unsafe_allow_html=True)
 
-        left, right = st.columns([1.45, 1])
+        left, mid, right = st.columns([1.25, 1, 1])
 
         with left:
             trs = ""
@@ -1162,46 +1213,53 @@ def face_app():
                 sym = row["symbol"]
                 dig = SYMBOLS[sym]["digits"]
                 cc = UP if row["change"] >= 0 else DOWN
-                v = row["view"]
-                bc = {"bullish": UP, "bearish": DOWN}.get(v.alignment, WARN)
                 state, scol = state_of(row)
+                rv = row.get("rsi", 50)
+                rcol = DOWN if rv > 70 else (UP if rv < 30 else MUTED)
                 trs += (f"<tr><td style='font-weight:500'>{SYMBOLS[sym]['mt5']}</td>"
                         f"<td class='num'>{row['price']:,.{dig}f}</td>"
                         f"<td class='num' style='color:{cc}'>{row['change']:+.2f}%</td>"
-                        f"<td style='color:{bc}'>{v.alignment}</td>"
-                        f"<td class='num'>{int(v.agreement*100)}%</td>"
-                        f"<td><span style='color:{scol};font-size:10px;letter-spacing:.05em'>"
+                        f"<td class='num' style='color:{rcol}'>{rv:.0f}</td>"
+                        f"<td><span style='color:{scol};font-size:10px;font-weight:600'>"
                         f"{state}</span></td></tr>")
             panel("Market overview",
                   f"<table class='zt'><tr><th>Symbol</th><th>Price</th><th>Today</th>"
-                  f"<th>Bias</th><th>Agree</th><th>State</th></tr>{trs}</table>",
-                  "LIVE" if any(x["origin"] != "demo" for x in rows) else "DEMO", flush=True)
+                  f"<th>RSI</th><th>Grade</th></tr>{trs}</table>",
+                  "LIVE" if any(x["origin"] != "demo" for x in rows) else "DEMO",
+                  flush=True)
 
             best = found[0] if found else (watching[0] if watching else rows[0])
-            st.markdown(f"<div class='zp'><div class='zp-head'><span class='t'>"
-                        f"{SYMBOLS[best['symbol']]['mt5']} · {best['tf']}</span>"
-                        f"<span class='r'>{origin_chip(best['origin'])}</span></div></div>",
-                        unsafe_allow_html=True)
-            st.plotly_chart(chart(best, r, 110, True, 330), use_container_width=True,
+            st.markdown(f"<div class='zp' style='margin-bottom:0;border-bottom:none;"
+                        f"border-radius:10px 10px 0 0'><div class='zp-head'>"
+                        f"<span class='t'>{SYMBOLS[best['symbol']]['mt5']} · "
+                        f"{best['tf']}</span><span class='r'>{score_pill(best)}</span>"
+                        f"</div></div>", unsafe_allow_html=True)
+            st.plotly_chart(chart(best, r, 100, True, 300), use_container_width=True,
                             config={"displayModeBar": False})
 
-        with right:
-            if found:
-                trs = "".join(
-                    f"<tr><td style='font-weight:500'>{SYMBOLS[x['symbol']]['mt5']}</td>"
-                    f"<td>{x['tf']}</td>"
-                    f"<td style='color:{UP if x['decision'].direction=='BUY' else DOWN}'>"
-                    f"{x['decision'].direction}</td>"
-                    f"<td class='num'>{x['decision'].rr}R</td>"
-                    f"<td>{viz.confidence_bar(x['grade'])}</td></tr>" for x in found[:8])
-                panel("Top setups",
-                      f"<table class='zt'><tr><th>Symbol</th><th>TF</th><th>Side</th>"
-                      f"<th>R:R</th><th>Confidence</th></tr>{trs}</table>",
-                      f"{len(found)} found", flush=True)
+        with mid:
+            if scored:
+                trs = ""
+                for x in scored[:7]:
+                    p, sc = x["plan"], x["score"]
+                    trs += (f"<tr><td style='font-weight:500'>{p.mt5}</td>"
+                            f"<td style='color:{UP if p.direction=='BUY' else DOWN}'>"
+                            f"{p.direction}</td>"
+                            f"<td class='zl-muted' style='font-size:10px'>"
+                            f"{p.setup_type}</td>"
+                            f"<td class='num'>1:{p.rr2:g}</td>"
+                            f"<td>{viz.strength_bar(sc.total, sc.color, 40)}</td>"
+                            f"<td class='num' style='color:{sc.color};font-weight:600'>"
+                            f"{sc.total}</td></tr>")
+                panel("Ranked setups",
+                      f"<table class='zt'><tr><th>Symbol</th><th>Side</th><th>Type</th>"
+                      f"<th>R:R</th><th>Score</th><th></th></tr>{trs}</table>",
+                      f"{len(scored)} found", flush=True)
             else:
-                panel("Top setups",
+                panel("Ranked setups",
                       "<div class='zl-muted'>Nothing confirmed right now. That is the "
-                      "system working — it waits for proof, not hope.</div>")
+                      "system working — it waits for a candle to prove the level is "
+                      "holding.</div>")
 
             if watching:
                 trs = "".join(
@@ -1209,22 +1267,81 @@ def face_app():
                     f"<td style='color:{UP if x['watch'].direction=='BUY' else DOWN}'>"
                     f"{x['watch'].direction}</td>"
                     f"<td class='num'>{pips(x['symbol'], x['watch'].distance):g}p</td>"
+                    f"<td class='num zl-muted'>{x['watch'].minutes_left}m</td>"
                     f"<td><span style='color:"
                     f"{UP if x['watch'].urgency=='imminent' else WARN};font-size:10px'>"
                     f"{x['watch'].urgency}</span></td></tr>" for x in watching[:6])
                 panel("Forming — watch these",
                       f"<table class='zt'><tr><th>Symbol</th><th>Side</th><th>Away</th>"
-                      f"<th>State</th></tr>{trs}</table>", flush=True)
+                      f"<th>Close</th><th>State</th></tr>{trs}</table>", flush=True)
+
+            liq_rows = ""
+            for x in rows[:6]:
+                lq = x.get("liquidity")
+                if not lq:
+                    continue
+                sweep = (f"<span style='color:{UP if lq.sweep=='bullish' else DOWN}'>"
+                         f"{lq.sweep}</span>" if lq.sweep else "<span class='zl-muted'>—</span>")
+                liq_rows += (f"<tr><td style='font-weight:500'>"
+                             f"{SYMBOLS[x['symbol']]['mt5']}</td>"
+                             f"<td class='num'>{len(lq.equal_highs)}</td>"
+                             f"<td class='num'>{len(lq.equal_lows)}</td>"
+                             f"<td>{sweep}</td></tr>")
+            if liq_rows:
+                panel("Liquidity",
+                      f"<table class='zt'><tr><th>Symbol</th><th>Eq highs</th>"
+                      f"<th>Eq lows</th><th>Sweep</th></tr>{liq_rows}</table>",
+                      "STOP RUNS", flush=True)
+
+        with right:
+            strength = currency_strength({x["symbol"]: x["change"] for x in rows})
+            if strength:
+                bars = "".join(
+                    f"<div class='zl-row' style='padding:5px 0'>"
+                    f"<span style='flex:1;font-size:11.5px;font-weight:500'>{cur}</span>"
+                    f"{viz.strength_bar(val, UP if val >= 60 else (DOWN if val <= 35 else A300), 74)}"
+                    f"<span class='mono' style='font-size:10.5px;width:26px;"
+                    f"text-align:right;color:{MUTED}'>{val}</span></div>"
+                    for cur, val in strength[:8])
+                panel("Currency strength", bars, "TODAY")
+
+            vol_rows = "".join(
+                f"<tr><td style='font-weight:500'>{SYMBOLS[x['symbol']]['mt5']}</td>"
+                f"<td class='num'>{pips(x['symbol'], x['atr']):g}p</td>"
+                f"<td style='color:"
+                f"{UP if x.get('vol_state')=='expanding' else (WARN if x.get('vol_state')=='contracting' else MUTED)};"
+                f"font-size:10px'>{x.get('vol_state','—')}</td>"
+                f"<td class='num zl-muted'>{x.get('vol_ratio',1):g}×</td></tr>"
+                for x in sorted(rows, key=lambda z: -(z["atr"] / max(z["price"], 1e-9)))[:7])
+            panel("Volatility",
+                  f"<table class='zt'><tr><th>Symbol</th><th>ATR</th><th>Range</th>"
+                  f"<th>Shift</th></tr>{vol_rows}</table>", flush=True)
 
             if events:
                 trs = "".join(
                     f"<tr><td class='num'>{e['time']:%H:%M}</td><td>{e['currency']}</td>"
-                    f"<td>{e['title'][:26]}</td><td>"
-                    f"{viz.strength_bar({'high':100,'medium':60}.get(e['impact'],25), {'high':DOWN,'medium':WARN}.get(e['impact'],FAINT), 42)}"
-                    f"</td></tr>" for e in [x for x in events if x['time'] > now][:6])
+                    f"<td style='font-size:10.5px'>{e['title'][:22]}</td><td>"
+                    f"{viz.strength_bar({'high':100,'medium':60}.get(e['impact'],25), {'high':DOWN,'medium':WARN}.get(e['impact'],FAINT), 34)}"
+                    f"</td></tr>" for e in [x for x in events if x['time'] > now][:7])
                 panel("Economic calendar",
                       f"<table class='zt'><tr><th>Time</th><th>Cur</th><th>Event</th>"
-                      f"<th>Impact</th></tr>{trs}</table>", "TODAY", flush=True)
+                      f"<th>Impact</th></tr>{trs}</table>", "UTC", flush=True)
+
+            sess_rows = ""
+            for name, a, b in SESSIONS:
+                on = a <= now.hour < b
+                pct = int((now.hour - a) / max(b - a, 1) * 100) if on else 0
+                sub = f"closes in {b - now.hour}h" if on else f"opens in {(a - now.hour) % 24}h"
+                col = ACCENT if on else FAINT
+                sess_rows += (f"<div class='zl-row' style='padding:6px 0'>"
+                              f"<span style='width:6px;height:6px;border-radius:50%;"
+                              f"background:{col};flex:none'></span>"
+                              f"<span style='flex:1;font-size:11.5px'>{name}</span>"
+                              f"<span class='zl-muted' style='font-size:10px'>{sub}</span>"
+                              f"{viz.strength_bar(pct, col, 48)}</div>")
+            panel("Sessions", sess_rows,
+                  f"<span style='color:{ACCENT if live else FAINT}'>"
+                  f"{len(live)} open</span>")
 
     # ── 2 · Scanner ──
     def _scanner():
@@ -1232,12 +1349,36 @@ def face_app():
                     "market.</b> Every symbol on your watchlist is read on every timeframe "
                     "you selected, then measured against your rules.</div>",
                     unsafe_allow_html=True)
-        c1, c2 = st.columns([1, 2.2])
-        with c1:
-            if st.button("Run scan", use_container_width=True, key="sc_run"):
-                run_scan(r)
-                st.rerun()
-        with c2:
+
+        f1, f2, f3, f4 = st.columns(4)
+        classes = ["All"] + sorted({v["class"] for v in SYMBOLS.values()})
+        st.session_state["filter_class"] = f1.selectbox(
+            "Asset class", classes,
+            index=classes.index(st.session_state["filter_class"])
+            if st.session_state["filter_class"] in classes else 0)
+        setup_opts = ["All", "Liquidity Sweep", "Order Block", "Trend Pullback",
+                      "Breakout Retest", "S&R Reversal"]
+        st.session_state["filter_setup"] = f2.selectbox(
+            "Setup type", setup_opts,
+            index=setup_opts.index(st.session_state["filter_setup"])
+            if st.session_state["filter_setup"] in setup_opts else 0)
+        trend_opts = ["Any", "bullish", "bearish", "sideways"]
+        st.session_state["filter_trend"] = f3.selectbox(
+            "Trend filter", trend_opts,
+            index=trend_opts.index(st.session_state["filter_trend"])
+            if st.session_state["filter_trend"] in trend_opts else 0)
+        st.session_state["filter_atr"] = f4.slider(
+            "Min ATR (pips)", 0.0, 200.0, float(st.session_state["filter_atr"]), 5.0)
+
+        c1, c2, c3 = st.columns([1, 1, 2])
+        if c1.button("Run scan", use_container_width=True, key="sc_run"):
+            run_scan(r)
+            st.rerun()
+        if c2.button("Reset filters", use_container_width=True, key="sc_reset"):
+            st.session_state.update(filter_class="All", filter_setup="All",
+                                    filter_trend="Any", filter_atr=0.0)
+            st.rerun()
+        with c3:
             tf_picker("tf_scan")
 
         if not scan:
@@ -1245,6 +1386,23 @@ def face_app():
             return
 
         rows = scan["rows"]
+        if st.session_state["filter_class"] != "All":
+            rows = [x for x in rows
+                    if SYMBOLS[x["symbol"]]["class"] == st.session_state["filter_class"]]
+        if st.session_state["filter_setup"] != "All":
+            rows = [x for x in rows if x.get("plan")
+                    and x["plan"].setup_type == st.session_state["filter_setup"]]
+        if st.session_state["filter_trend"] != "Any":
+            rows = [x for x in rows
+                    if x["view"].alignment == st.session_state["filter_trend"]]
+        if st.session_state["filter_atr"] > 0:
+            rows = [x for x in rows
+                    if pips(x["symbol"], x["atr"]) >= st.session_state["filter_atr"]]
+
+        if not rows:
+            note("No symbols match those filters. Press <b>Reset filters</b>.", "warn")
+            return
+
         trs = ""
         for row in rows:
             sym = row["symbol"]
@@ -1253,20 +1411,49 @@ def face_app():
             state, scol = state_of(row)
             sup = f"{row['support'].mid:,.{dig}f}" if row.get("support") else "—"
             res = f"{row['resistance'].mid:,.{dig}f}" if row.get("resistance") else "—"
-            reason = d.verdict if not d.taken else f"{d.direction} · {d.rr}R"
+            sw = row.get("swings")
+            reason = (f"{d.direction} · {row['plan'].setup_type}"
+                      if d.taken and row.get("plan") else d.verdict)
             trs += (f"<tr><td style='font-weight:500'>{SYMBOLS[sym]['mt5']}</td>"
                     f"<td class='num'>{row['price']:,.{dig}f}</td>"
                     f"<td class='num' style='color:{UP}'>{sup}</td>"
                     f"<td class='num' style='color:{DOWN}'>{res}</td>"
+                    f"<td class='zl-muted' style='font-size:10px'>"
+                    f"{sw.recent if sw else '—'}</td>"
                     f"<td class='num'>{pips(sym, row['atr']):g}p</td>"
-                    f"<td>{viz.confidence_bar(row['grade'])}</td>"
-                    f"<td><span style='color:{scol};font-size:10px'>{state}</span></td>"
+                    f"<td><span style='color:{scol};font-size:10px;font-weight:600'>"
+                    f"{state}</span></td>"
                     f"<td class='zl-muted'>{reason}</td></tr>")
         panel("Scan result",
               f"<table class='zt'><tr><th>Symbol</th><th>Price</th><th>Support</th>"
-              f"<th>Resistance</th><th>ATR</th><th>Grade</th><th>State</th>"
+              f"<th>Resistance</th><th>Structure</th><th>ATR</th><th>Grade</th>"
               f"<th>Verdict</th></tr>{trs}</table>",
-              f"{len(rows)} symbols · {st.session_state['tf']}", flush=True)
+              f"{len(rows)} of {len(scan['rows'])} · {st.session_state['tf']}", flush=True)
+
+        signals = [x for x in rows if x["decision"].taken and x.get("plan")]
+        if signals:
+            trs = ""
+            for x in signals:
+                p, sc = x["plan"], x["score"]
+                dg = p.digits
+                blocked = bool(p.news_warning)
+                status = ("WAIT" if blocked else
+                          "READY" if sc.band in ("A+", "A") else "REVIEW")
+                stc = DOWN if blocked else (UP if status == "READY" else WARN)
+                trs += (f"<tr><td class='num zl-muted'>{now:%H:%M}</td>"
+                        f"<td style='font-weight:500'>{p.mt5}</td>"
+                        f"<td class='zl-muted' style='font-size:10px'>{p.setup_type}</td>"
+                        f"<td style='color:{UP if p.direction=='BUY' else DOWN}'>"
+                        f"{p.direction}</td>"
+                        f"<td class='num'>{p.entry_low:,.{dg}f}</td>"
+                        f"<td class='num' style='color:{DOWN}'>{p.stop:,.{dg}f}</td>"
+                        f"<td class='num' style='color:{UP}'>{p.tp2:,.{dg}f}</td>"
+                        f"<td><span style='color:{stc};font-size:10px;font-weight:600'>"
+                        f"{status}</span></td></tr>")
+            panel("Recent signals",
+                  f"<table class='zt'><tr><th>Time</th><th>Symbol</th><th>Setup</th>"
+                  f"<th>Side</th><th>Entry</th><th>SL</th><th>TP2</th><th>Status</th>"
+                  f"</tr>{trs}</table>", flush=True)
 
         if scan["failed"]:
             with st.expander(f"{len(scan['failed'])} symbols could not be read"):
@@ -1589,6 +1776,181 @@ def face_app():
                       "A wider stop means fewer lots, so the money at risk stays the same.")
 
     # ── 8 · News ──
+    def _watchlist():
+        st.markdown("<div class='zl-muted' style='margin-bottom:9px'>Groups of instruments "
+                    "you follow. Tap a group to load it straight into the scanner.</div>",
+                    unsafe_allow_html=True)
+        groups = st.session_state["groups"]
+        cols = st.columns(len(groups))
+        for col, (name, syms) in zip(cols, groups.items()):
+            with col:
+                if st.button(name, use_container_width=True, key=f"wl_{name}"):
+                    st.session_state["watch"] = [s for s in syms if s in SYMBOLS]
+                    run_scan(r)
+                    st.rerun()
+                st.markdown(f"<div class='zl-muted' style='font-size:10px;"
+                            f"text-align:center'>{len(syms)} symbols</div>",
+                            unsafe_allow_html=True)
+
+        for name, syms in groups.items():
+            live_syms = [s for s in syms if s in SYMBOLS]
+            if not live_syms:
+                continue
+            trs = ""
+            for s in live_syms:
+                row = next((x for x in (scan["rows"] if scan else [])
+                            if x["symbol"] == s), None)
+                dig = SYMBOLS[s]["digits"]
+                if row:
+                    cc = UP if row["change"] >= 0 else DOWN
+                    state, scol = state_of(row)
+                    sw = row.get("swings")
+                    trs += (f"<tr><td style='font-weight:500'>{SYMBOLS[s]['mt5']}</td>"
+                            f"<td class='zl-muted'>{SYMBOLS[s]['name']}</td>"
+                            f"<td class='num'>{row['price']:,.{dig}f}</td>"
+                            f"<td class='num' style='color:{cc}'>{row['change']:+.2f}%</td>"
+                            f"<td class='zl-muted' style='font-size:10px'>"
+                            f"{sw.recent if sw else '—'}</td>"
+                            f"<td><span style='color:{scol};font-size:10px;"
+                            f"font-weight:600'>{state}</span></td></tr>")
+                else:
+                    trs += (f"<tr><td style='font-weight:500'>{SYMBOLS[s]['mt5']}</td>"
+                            f"<td class='zl-muted'>{SYMBOLS[s]['name']}</td>"
+                            f"<td colspan='4' class='zl-muted'>not scanned yet</td></tr>")
+            panel(name, f"<table class='zt'><tr><th>Symbol</th><th>Name</th>"
+                  f"<th>Price</th><th>Today</th><th>Structure</th><th>Grade</th></tr>"
+                  f"{trs}</table>", SYMBOLS[live_syms[0]]["class"], flush=True)
+
+        st.markdown("##### Edit a group")
+        c1, c2 = st.columns([1, 2])
+        gname = c1.selectbox("Group", list(groups.keys()), key="wl_edit")
+        picked = c2.multiselect("Symbols", list(SYMBOLS.keys()), groups[gname],
+                                key="wl_syms")
+        if st.button("Save group", use_container_width=True, key="wl_save"):
+            st.session_state["groups"][gname] = picked
+            st.success("Saved.") if save_profile() else st.warning("Could not save.")
+
+    def _performance():
+        rows = picks()
+        if not rows:
+            note("Log some picks first — press <b>Log</b> on any setup. Performance needs "
+                 "recorded trades before it can measure anything.", "muted")
+            return
+
+        closed = [x for x in rows if x.get("outcome") in ("win", "loss")]
+        wins = [x for x in closed if x["outcome"] == "win"]
+        losses = [x for x in closed if x["outcome"] == "loss"]
+        win_rate = len(wins) / len(closed) * 100 if closed else 0.0
+        won_r = sum(x.get("rr") or 0 for x in wins)
+        pf = round(won_r / len(losses), 2) if losses else (99.0 if won_r else 0.0)
+        avg_rr = sum(x.get("rr") or 0 for x in rows) / max(len(rows), 1)
+        pfc = UP if pf >= 1.2 else (WARN if pf >= 1.0 else DOWN)
+
+        st.markdown(f"""
+        <div class='zl-stats'>
+          <div class='zl-stat'><div class='k'>Total picks</div>
+            <div class='v mono'>{len(rows)}</div>
+            <div class='s'>{len(closed)} with a result</div></div>
+          <div class='zl-stat'><div class='k'>Win rate</div>
+            <div class='v mono'>{win_rate:.0f}%</div>
+            <div class='s'>{len(wins)}W · {len(losses)}L</div></div>
+          <div class='zl-stat'><div class='k'>Profit factor</div>
+            <div class='v mono' style='color:{pfc}'>{pf}</div>
+            <div class='s'>1.2+ is workable</div></div>
+          <div class='zl-stat'><div class='k'>Average R:R</div>
+            <div class='v mono'>{avg_rr:.2f}</div>
+            <div class='s'>as planned</div></div>
+        </div>""", unsafe_allow_html=True)
+
+        if not closed:
+            note("None of your picks have a result yet. Mark them at the bottom of this "
+                 "page and every number above starts meaning something.", "accent")
+
+        def breakdown(title, keyfn, header):
+            buckets = {}
+            for x in rows:
+                buckets.setdefault(keyfn(x) or "—", []).append(x)
+            trs = ""
+            for k, v in sorted(buckets.items(), key=lambda i: -len(i[1])):
+                c = [y for y in v if y.get("outcome") in ("win", "loss")]
+                w = [y for y in c if y["outcome"] == "win"]
+                wr = len(w) / len(c) * 100 if c else 0
+                rr = sum(y.get("rr") or 0 for y in v) / max(len(v), 1)
+                col = (UP if wr >= 55 else WARN if wr >= 40 else DOWN) if c else FAINT
+                trs += (f"<tr><td style='font-weight:500'>{k}</td>"
+                        f"<td class='num'>{len(v)}</td><td class='num'>{len(c)}</td>"
+                        f"<td>{viz.strength_bar(int(wr), col, 44)}</td>"
+                        f"<td class='num' style='color:{col}'>"
+                        f"{f'{wr:.0f}%' if c else '—'}</td>"
+                        f"<td class='num'>{rr:.2f}</td></tr>")
+            panel(title, f"<table class='zt'><tr><th>{header}</th><th>Picks</th>"
+                  f"<th>Closed</th><th>Win rate</th><th></th><th>Avg R:R</th></tr>"
+                  f"{trs}</table>", flush=True)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            breakdown("By setup type", lambda x: x.get("setup_type"), "Setup")
+            breakdown("By session", lambda x: x.get("session"), "Session")
+        with c2:
+            breakdown("By instrument", lambda x: x.get("mt5"), "Symbol")
+            breakdown("By grade", lambda x: x.get("band") or x.get("grade"), "Grade")
+
+        curve, running, peak, dd = [0.0], 0.0, 0.0, 0.0
+        for x in reversed(rows):
+            if x.get("outcome") == "win":
+                running += x.get("rr") or 0
+            elif x.get("outcome") == "loss":
+                running -= 1
+            else:
+                continue
+            curve.append(round(running, 2))
+            peak = max(peak, running)
+            dd = min(dd, running - peak)
+
+        if len(curve) > 1:
+            panel("Running result, in R",
+                  f"<div class='zl-lv' style='margin:0;padding:0;border:none'>"
+                  f"<div><div class='k'>Total</div><div class='v mono' style='color:"
+                  f"{UP if running > 0 else DOWN}'>{running:+.1f}R</div></div>"
+                  f"<div><div class='k'>Max drawdown</div><div class='v mono' "
+                  f"style='color:{DOWN}'>{dd:.1f}R</div></div>"
+                  f"<div><div class='k'>Peak</div><div class='v mono'>"
+                  f"{peak:+.1f}R</div></div>"
+                  f"<div><div class='k'>In money</div><div class='v mono'>"
+                  f"${running * bal_of() * r.risk_percent / 100:,.0f}</div></div></div>")
+            eq = go.Figure(go.Scatter(y=curve, mode="lines",
+                                      line=dict(color=ACCENT, width=1.8), fill="tozeroy",
+                                      fillcolor="rgba(145,132,217,.14)", showlegend=False))
+            eq.update_layout(height=190, margin=dict(l=4, r=8, t=4, b=4),
+                             paper_bgcolor=SURFACE, plot_bgcolor=SURFACE,
+                             font=dict(color=MUTED, size=10,
+                                       family="JetBrains Mono, monospace"),
+                             xaxis=dict(gridcolor="rgba(233,233,237,.05)", zeroline=False),
+                             yaxis=dict(gridcolor="rgba(233,233,237,.06)", zeroline=True,
+                                        zerolinecolor="rgba(233,233,237,.18)"))
+            st.plotly_chart(eq, use_container_width=True,
+                            config={"displayModeBar": False})
+
+        st.markdown("##### Record what happened")
+        pending = [x for x in rows if x.get("outcome") == "pending"][:12]
+        if not pending:
+            st.markdown("<div class='zl-muted'>Every pick has a result recorded.</div>",
+                        unsafe_allow_html=True)
+        for i, x in enumerate(pending):
+            c1, c2, c3, c4 = st.columns([2.2, 1, 1, 1])
+            c1.markdown(f"<div style='padding-top:7px;font-size:12px'><b>{x['mt5']}</b> "
+                        f"{x['direction']} · <span class='zl-muted'>{x['at'][5:16]} · "
+                        f"{x.get('rr')}R</span></div>", unsafe_allow_html=True)
+            if c2.button("Win", key=f"pw{i}", use_container_width=True):
+                set_outcome(x["at"], "win")
+                st.rerun()
+            if c3.button("Loss", key=f"pl{i}", use_container_width=True):
+                set_outcome(x["at"], "loss")
+                st.rerun()
+            if c4.button("Skipped", key=f"ps{i}", use_container_width=True):
+                set_outcome(x["at"], "skipped")
+                st.rerun()
+
     def _news():
         t1, t2 = st.tabs(["Calendar", "Headlines"])
         with t1:
@@ -1975,6 +2337,28 @@ def face_app():
                 except Exception as exc:
                     st.warning(f"Still failing: {exc}")
 
+            st.markdown("##### Alerts")
+            st.markdown("<div class='zl-muted' style='margin-bottom:7px'>Which events "
+                        "should reach your phone.</div>", unsafe_allow_html=True)
+            alert_defs = [
+                ("aplus", "A+ setup found", "Anything scoring above your threshold"),
+                ("zone", "Price entering a zone", "Reaching support or resistance"),
+                ("sweep", "Liquidity sweep", "Stops run above a high or below a low"),
+                ("bos", "BOS / CHoCH", "Structure breaks — noisier"),
+                ("fvg", "FVG created or retested", "New imbalance, or price returning"),
+                ("news", "News approaching", "When entries pause and resume"),
+                ("invalid", "Setup invalidated", "The idea is dead, stand down"),
+            ]
+            ac = st.columns(2)
+            for i, (key, label, hint) in enumerate(alert_defs):
+                with ac[i % 2]:
+                    st.session_state["alerts"][key] = st.toggle(
+                        label, st.session_state["alerts"].get(key, False),
+                        help=hint, key=f"al_{key}")
+            st.session_state["alert_floor"] = st.slider(
+                "Only alert above this confidence", 60, 95,
+                st.session_state["alert_floor"], 5)
+
             st.markdown("##### Phone alerts")
             note("1 · Message <b>@BotFather</b> on Telegram, send <code>/newbot</code>, copy "
                  "the token.<br>2 · Message your new bot once.<br>3 · Message "
@@ -2003,10 +2387,10 @@ def face_app():
                         "tables get tighter, panels stack, and the tab row scrolls "
                         "sideways.</div>", unsafe_allow_html=True)
 
-    fns = [_dash, _scanner, _setups, _charts, _analysis, _levels, _risk, _news,
-           _journal, _learn, _settings]
-    labels = ["Dashboard", "Scanner", "A+ Setups", "Charts", "Analysis", "Levels", "Risk",
-              "News", "Journal", "Learn", "Settings"]
+    fns = [_dash, _scanner, _setups, _charts, _analysis, _levels, _watchlist, _risk,
+           _news, _journal, _performance, _learn, _settings]
+    labels = ["Dashboard", "Scanner", "A+ Setups", "Charts", "Analysis", "Levels",
+              "Watchlist", "Risk", "News", "Journal", "Performance", "Learn", "Settings"]
     for tab, fn, label in zip(tabs, fns, labels):
         with tab:
             safe(fn, label)
